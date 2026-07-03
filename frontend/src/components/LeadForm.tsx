@@ -26,11 +26,9 @@ export default function LeadForm({ initial, onSaved, onCancel }: Props) {
     preferredArea: initial?.preferredArea ?? "",
     budgetMin: initial?.budgetMin?.toString() ?? "",
     budgetMax: initial?.budgetMax?.toString() ?? "",
-    currency: initial?.currency ?? "AED",
+    currency: initial?.currency ?? "INR",
     propertyType: initial?.propertyType ?? "",
     bedrooms: initial?.bedrooms?.toString() ?? "",
-    visaType: initial?.visaType ?? "",
-    visaRequired: initial?.visaRequired ?? false,
     source: initial?.source ?? "MANUAL",
     priority: initial?.priority ?? "MEDIUM",
     assignedToId: initial?.assignedToId ?? "",
@@ -81,7 +79,7 @@ export default function LeadForm({ initial, onSaved, onCancel }: Props) {
           <Input required value={form.fullName} onChange={(e) => set("fullName", e.target.value)} />
         </Field>
         <Field label="Mobile *">
-          <Input required value={form.mobile} onChange={(e) => set("mobile", e.target.value)} placeholder="+9715…" />
+          <Input required value={form.mobile} onChange={(e) => set("mobile", e.target.value)} placeholder="+91 9…" />
         </Field>
         <Field label="WhatsApp number">
           <Input value={form.whatsappNumber ?? ""} onChange={(e) => set("whatsappNumber", e.target.value)} placeholder="defaults to mobile" />
@@ -112,20 +110,11 @@ export default function LeadForm({ initial, onSaved, onCancel }: Props) {
         </Field>
         <Field label="Currency">
           <Select value={form.currency} onChange={(e) => set("currency", e.target.value)}>
-            {["AED", "USD", "EUR", "INR", "SAR"].map((c) => <option key={c}>{c}</option>)}
+            {["INR", "USD", "AED", "EUR"].map((c) => <option key={c}>{c}</option>)}
           </Select>
         </Field>
         <Field label="Bedrooms">
           <Input type="number" min={0} value={form.bedrooms} onChange={(e) => set("bedrooms", e.target.value)} />
-        </Field>
-        <Field label="Visa type">
-          <Input value={form.visaType ?? ""} onChange={(e) => set("visaType", e.target.value)} placeholder="e.g. Golden Visa" />
-        </Field>
-        <Field label="Visa required?">
-          <Select value={form.visaRequired ? "yes" : "no"} onChange={(e) => set("visaRequired", e.target.value === "yes")}>
-            <option value="no">No</option>
-            <option value="yes">Yes</option>
-          </Select>
         </Field>
         <Field label="Source">
           <Select value={form.source} onChange={(e) => set("source", e.target.value)}>

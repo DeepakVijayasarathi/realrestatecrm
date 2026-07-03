@@ -11,7 +11,7 @@ export const createLeadSchema = z.object({
   preferredArea: z.string().optional().nullable(),
   budgetMin: z.coerce.number().nonnegative().optional().nullable(),
   budgetMax: z.coerce.number().nonnegative().optional().nullable(),
-  currency: z.string().default("AED"),
+  currency: z.string().default("INR"),
   propertyType: z.nativeEnum(PropertyType).optional().nullable(),
   bedrooms: z.coerce.number().int().min(0).optional().nullable(),
   visaType: z.string().optional().nullable(),

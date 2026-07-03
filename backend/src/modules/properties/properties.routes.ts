@@ -35,7 +35,7 @@ const propertySchema = z.object({
   furnishing: z.nativeEnum(FurnishingStatus).optional().nullable(),
   amenities: z.array(z.string()).default([]),
   price: z.coerce.number().positive(),
-  currency: z.string().default("AED"),
+  currency: z.string().default("INR"),
   description: z.string().optional().nullable(),
   videoUrl: z.string().optional().nullable().or(z.literal("")),
   status: z.nativeEnum(AvailabilityStatus).default(AvailabilityStatus.AVAILABLE),

@@ -205,7 +205,7 @@ model Lead {
   preferredArea    String?
   budgetMin        Decimal?        @db.Decimal(14, 2)
   budgetMax        Decimal?        @db.Decimal(14, 2)
-  currency         String          @default("AED")
+  currency         String          @default("INR")
   propertyType     PropertyType?
   bedrooms         Int?
   visaType         String?
@@ -296,7 +296,7 @@ model Property {
   furnishing   FurnishingStatus?
   amenities    String[]           @default([])
   price        Decimal            @db.Decimal(14, 2)
-  currency     String             @default("AED")
+  currency     String             @default("INR")
   description  String?
   videoUrl     String?
   status       AvailabilityStatus @default(AVAILABLE)

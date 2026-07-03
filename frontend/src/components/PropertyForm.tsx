@@ -27,7 +27,7 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
     furnishing: initial?.furnishing ?? "",
     amenities: (initial?.amenities ?? []).join(", "),
     price: initial?.price?.toString() ?? "",
-    currency: initial?.currency ?? "AED",
+    currency: initial?.currency ?? "INR",
     description: initial?.description ?? "",
     status: initial?.status ?? "AVAILABLE",
     ownerName: initial?.ownerName ?? "",
@@ -127,7 +127,7 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
           </Select>
         </Field>
         <Field label="Location *">
-          <Input required value={form.location} onChange={(e) => set("location", e.target.value)} placeholder="e.g. Dubai Marina" />
+          <Input required value={form.location} onChange={(e) => set("location", e.target.value)} placeholder="e.g. Anna Nagar, Chennai" />
         </Field>
         <Field label="Address">
           <Input value={form.address ?? ""} onChange={(e) => set("address", e.target.value)} />
@@ -152,7 +152,7 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
         </Field>
         <Field label="Currency">
           <Select value={form.currency} onChange={(e) => set("currency", e.target.value)}>
-            {["AED", "USD", "EUR", "INR", "SAR"].map((c) => <option key={c}>{c}</option>)}
+            {["INR", "USD", "AED", "EUR"].map((c) => <option key={c}>{c}</option>)}
           </Select>
         </Field>
         <Field label="Availability">

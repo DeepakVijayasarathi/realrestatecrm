@@ -18,7 +18,6 @@ const initialForm = {
   budgetMax: "",
   propertyType: "",
   bedrooms: "",
-  visaRequired: false,
   requirementNotes: "",
 };
 
@@ -49,7 +48,6 @@ export default function EnquiryPage() {
         budgetMax: form.budgetMax ? Number(form.budgetMax) : null,
         propertyType: form.propertyType || null,
         bedrooms: form.bedrooms ? Number(form.bedrooms) : null,
-        visaRequired: form.visaRequired,
         requirementNotes: form.requirementNotes || null,
         source: "WEBSITE_FORM",
       });
@@ -100,7 +98,7 @@ export default function EnquiryPage() {
                   <Input required minLength={2} value={form.fullName} onChange={(e) => set("fullName", e.target.value)} placeholder="Your name" />
                 </Field>
                 <Field label="Mobile *">
-                  <Input required minLength={5} type="tel" value={form.mobile} onChange={(e) => set("mobile", e.target.value)} placeholder="+971 5x xxx xxxx" />
+                  <Input required minLength={5} type="tel" value={form.mobile} onChange={(e) => set("mobile", e.target.value)} placeholder="+91 9xxxx xxxxx" />
                 </Field>
                 <Field label="WhatsApp number">
                   <Input type="tel" value={form.whatsappNumber} onChange={(e) => set("whatsappNumber", e.target.value)} placeholder="Same as mobile if empty" />
@@ -109,13 +107,13 @@ export default function EnquiryPage() {
                   <Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="you@example.com" />
                 </Field>
                 <Field label="Country">
-                  <Input value={form.country} onChange={(e) => set("country", e.target.value)} placeholder="e.g. UAE" />
+                  <Input value={form.country} onChange={(e) => set("country", e.target.value)} placeholder="e.g. India" />
                 </Field>
                 <Field label="City">
-                  <Input value={form.city} onChange={(e) => set("city", e.target.value)} placeholder="e.g. Dubai" />
+                  <Input value={form.city} onChange={(e) => set("city", e.target.value)} placeholder="e.g. Chennai" />
                 </Field>
                 <Field label="Preferred area">
-                  <Input value={form.preferredArea} onChange={(e) => set("preferredArea", e.target.value)} placeholder="e.g. Dubai Marina" />
+                  <Input value={form.preferredArea} onChange={(e) => set("preferredArea", e.target.value)} placeholder="e.g. Anna Nagar" />
                 </Field>
                 <Field label="Property type">
                   <Select value={form.propertyType} onChange={(e) => set("propertyType", e.target.value)}>
@@ -134,22 +132,13 @@ export default function EnquiryPage() {
                     ))}
                   </Select>
                 </Field>
-                <Field label="Budget (AED)">
+                <Field label="Budget (INR)">
                   <div className="flex gap-2">
                     <Input type="number" min={0} value={form.budgetMin} onChange={(e) => set("budgetMin", e.target.value)} placeholder="Min" />
                     <Input type="number" min={0} value={form.budgetMax} onChange={(e) => set("budgetMax", e.target.value)} placeholder="Max" />
                   </div>
                 </Field>
               </div>
-              <label className="flex items-center gap-2 text-sm text-slate-600">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500/40"
-                  checked={form.visaRequired}
-                  onChange={(e) => set("visaRequired", e.target.checked)}
-                />
-                I am also interested in visa / residency assistance
-              </label>
               <Field label="Anything else we should know?">
                 <Textarea rows={3} value={form.requirementNotes} onChange={(e) => set("requirementNotes", e.target.value)} placeholder="Requirements, timeline, questions…" />
               </Field>

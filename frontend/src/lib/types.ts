@@ -25,7 +25,7 @@ export const PIPELINE_STAGES = [
 ] as const;
 export type PipelineStage = (typeof PIPELINE_STAGES)[number];
 
-export const LEAD_SOURCES = ["VISA_FORM", "WEBSITE_FORM", "MANUAL", "REFERRAL", "WHATSAPP", "IMPORT", "PARTNER"] as const;
+export const LEAD_SOURCES = ["WEBSITE_FORM", "MANUAL", "REFERRAL", "WHATSAPP", "IMPORT", "PARTNER"] as const;
 export const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"] as const;
 export const PROPERTY_TYPES = ["APARTMENT", "VILLA", "TOWNHOUSE", "PENTHOUSE", "STUDIO", "PLOT", "OFFICE", "RETAIL", "WAREHOUSE", "OTHER"] as const;
 export const PROPERTY_CATEGORIES = ["SALE", "RENT", "LEASE", "COMMERCIAL", "RESIDENTIAL"] as const;
@@ -114,10 +114,11 @@ export interface Paginated<T> {
   pageSize: number;
 }
 
-export function fmtMoney(value: string | number | null | undefined, currency = "AED") {
+export function fmtMoney(value: string | number | null | undefined, currency = "INR") {
   if (value === null || value === undefined || value === "") return "—";
-  // Fixed locale so prices group consistently (1,850,000) regardless of the browser's region
-  return `${currency} ${Number(value).toLocaleString("en-US")}`;
+  // INR uses Indian lakh/crore grouping (1,75,00,000); other currencies keep western grouping
+  const locale = currency === "INR" ? "en-IN" : "en-US";
+  return `${currency === "INR" ? "₹" : `${currency} `}${Number(value).toLocaleString(locale)}`;
 }
 
 export function fmtDate(value?: string | null, withTime = false) {

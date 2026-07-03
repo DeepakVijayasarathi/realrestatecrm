@@ -106,7 +106,7 @@ export default function SettingsPage() {
         <Card className="p-4">
           <h3 className="mb-2 text-sm font-semibold">Currencies</h3>
           <div className="flex gap-2">
-            <Input value={currencies} onChange={(e) => setCurrencies(e.target.value)} placeholder="AED, USD, EUR" />
+            <Input value={currencies} onChange={(e) => setCurrencies(e.target.value)} placeholder="INR, USD, AED" />
             <Button onClick={saveCurrencies}>Save</Button>
           </div>
         </Card>

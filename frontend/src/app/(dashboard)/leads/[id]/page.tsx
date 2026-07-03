@@ -157,7 +157,6 @@ export default function LeadDetailPage() {
     ["City / area", `${lead.city || "—"}${lead.preferredArea ? ` · ${lead.preferredArea}` : ""}`],
     ["Budget", lead.budgetMin || lead.budgetMax ? `${fmtMoney(lead.budgetMin, lead.currency)} – ${fmtMoney(lead.budgetMax, lead.currency)}` : "—"],
     ["Property type", `${labelize(lead.propertyType)}${lead.bedrooms != null ? ` · ${lead.bedrooms}BR` : ""}`],
-    ["Visa", lead.visaRequired ? lead.visaType || "Required" : "Not required"],
     ["Source", <Badge key="src" value={lead.source} />],
     ["Priority", <Badge key="pri" value={lead.priority} />],
     ["Assigned to", lead.assignedTo?.name ?? "Unassigned"],

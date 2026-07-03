@@ -242,7 +242,7 @@ router.post("/import", requireRole(...salesTeam), fileUpload.single("file"), asy
             preferredArea: row.preferredArea || null,
             budgetMin: row.budgetMin ? Number(row.budgetMin) : null,
             budgetMax: row.budgetMax ? Number(row.budgetMax) : null,
-            currency: row.currency || "AED",
+            currency: row.currency || "INR",
             propertyType: (row.propertyType as never) || null,
             bedrooms: row.bedrooms ? Number(row.bedrooms) : null,
             visaType: row.visaType || null,
