@@ -13,8 +13,12 @@ pipeline {
         APP_PORT_API  = "5300"
         APP_PORT_HTTP = "4400"
 
-        DATABASE_URL = "postgresql://postgres:Deepakiucs%402025@postgres:5432/realcrm"
-        JWT_SECRET     = "realcrm_jwt_secret_change_in_production_2026"
+        // Secrets come from Jenkins > Manage Jenkins > Credentials (kind: Secret text).
+        // Create these two before running the pipeline:
+        //   realcrm-database-url  -> postgresql://postgres:<password>@postgres:5432/realcrm
+        //   realcrm-jwt-secret    -> a long random string
+        DATABASE_URL   = credentials('realcrm-database-url')
+        JWT_SECRET     = credentials('realcrm-jwt-secret')
         JWT_EXPIRES_IN = "7d"
 
         // App (non-secret)
