@@ -14,6 +14,11 @@ export const env = {
     phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || "",
     accessToken: process.env.WHATSAPP_ACCESS_TOKEN || "",
   },
+  msg91: {
+    authKey: process.env.MSG91_AUTH_KEY || "",
+    integratedNumber: process.env.MSG91_INTEGRATED_NUMBER || "",
+    whatsappUrl: process.env.MSG91_WHATSAPP_URL || "https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/",
+  },
   smtp: {
     host: process.env.SMTP_HOST || "",
     port: Number(process.env.SMTP_PORT || 587),

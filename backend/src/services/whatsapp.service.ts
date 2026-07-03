@@ -40,6 +40,44 @@ class CloudApiProvider implements WhatsAppProvider {
   }
 }
 
+/**
+ * MSG91 WhatsApp provider (https://msg91.com).
+ * Sends a session (free-form text) message — the recipient must have messaged
+ * the integrated number within the last 24 hours; outside that window MSG91
+ * requires an approved template, which is account-specific.
+ */
+class Msg91Provider implements WhatsAppProvider {
+  async sendText(toNumber: string, body: string): Promise<SendResult> {
+    // MSG91 expects numbers as digits with country code, no "+"
+    const to = toNumber.replace(/\D/g, "");
+    try {
+      const res = await fetch(env.msg91.whatsappUrl, {
+        method: "POST",
+        headers: {
+          authkey: env.msg91.authKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          integrated_number: env.msg91.integratedNumber.replace(/\D/g, ""),
+          content_type: "text",
+          recipient_number: to,
+          text: body,
+        }),
+      });
+      const raw = await res.text();
+      let data: { status?: string; errors?: unknown; message?: unknown; request_id?: string } = {};
+      try { data = JSON.parse(raw); } catch { /* keep raw for the error message */ }
+      if (!res.ok || data.status === "fail" || data.status === "error") {
+        const detail = [data.errors, data.message].find((v) => typeof v === "string") as string | undefined;
+        return { status: MessageStatus.FAILED, error: detail || raw.slice(0, 300) || `HTTP ${res.status}` };
+      }
+      return { status: MessageStatus.SENT, providerMessageId: data.request_id };
+    } catch (err) {
+      return { status: MessageStatus.FAILED, error: err instanceof Error ? err.message : "Network error" };
+    }
+  }
+}
+
 /** Development provider: logs the message and reports it as sent. */
 class MockProvider implements WhatsAppProvider {
   async sendText(toNumber: string, body: string): Promise<SendResult> {
@@ -49,7 +87,9 @@ class MockProvider implements WhatsAppProvider {
 }
 
 export const whatsappProvider: WhatsAppProvider =
-  env.whatsapp.provider === "cloud" ? new CloudApiProvider() : new MockProvider();
+  env.whatsapp.provider === "cloud" ? new CloudApiProvider()
+  : env.whatsapp.provider === "msg91" ? new Msg91Provider()
+  : new MockProvider();
 
 /** Replace {{placeholders}} in a template body with values. */
 export function renderTemplate(body: string, vars: Record<string, string>) {

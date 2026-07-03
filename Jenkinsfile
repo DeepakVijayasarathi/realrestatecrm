@@ -22,11 +22,15 @@ pipeline {
         APP_URL             = "https://realcrm.meettomanage.cloud"
         NEXT_PUBLIC_API_URL = "https://apirealcrm.meettomanage.cloud/api"
 
-        // WhatsApp: "mock" logs messages locally, "cloud" uses WhatsApp Cloud API
+        // WhatsApp: "mock" logs locally, "cloud" uses Meta Cloud API, "msg91" uses MSG91
         WHATSAPP_PROVIDER        = "mock"
         WHATSAPP_CLOUD_API_URL   = "https://graph.facebook.com/v19.0"
         WHATSAPP_PHONE_NUMBER_ID = ""
         WHATSAPP_ACCESS_TOKEN    = ""
+
+        // MSG91 (used when WHATSAPP_PROVIDER=msg91) — from MSG91 dashboard
+        MSG91_AUTH_KEY          = ""
+        MSG91_INTEGRATED_NUMBER = ""
 
         // Email (leave SMTP_HOST empty to log emails to console)
         SMTP_HOST = ""
@@ -105,6 +109,8 @@ pipeline {
                         -e WHATSAPP_CLOUD_API_URL=${WHATSAPP_CLOUD_API_URL} \\
                         -e WHATSAPP_PHONE_NUMBER_ID="${WHATSAPP_PHONE_NUMBER_ID}" \\
                         -e WHATSAPP_ACCESS_TOKEN="${WHATSAPP_ACCESS_TOKEN}" \\
+                        -e MSG91_AUTH_KEY="${MSG91_AUTH_KEY}" \\
+                        -e MSG91_INTEGRATED_NUMBER="${MSG91_INTEGRATED_NUMBER}" \\
                         -e SMTP_HOST="${SMTP_HOST}" \\
                         -e SMTP_PORT="${SMTP_PORT}" \\
                         -e SMTP_USER="${SMTP_USER}" \\
@@ -206,6 +212,8 @@ pipeline {
                             -e WHATSAPP_CLOUD_API_URL=${WHATSAPP_CLOUD_API_URL} \\
                             -e WHATSAPP_PHONE_NUMBER_ID="${WHATSAPP_PHONE_NUMBER_ID}" \\
                             -e WHATSAPP_ACCESS_TOKEN="${WHATSAPP_ACCESS_TOKEN}" \\
+                            -e MSG91_AUTH_KEY="${MSG91_AUTH_KEY}" \\
+                            -e MSG91_INTEGRATED_NUMBER="${MSG91_INTEGRATED_NUMBER}" \\
                             -e SMTP_HOST="${SMTP_HOST}" \\
                             -e SMTP_PORT="${SMTP_PORT}" \\
                             -e SMTP_USER="${SMTP_USER}" \\
