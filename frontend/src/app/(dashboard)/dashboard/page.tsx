@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { Card, Spinner } from "@/components/ui";
 import { labelize } from "@/lib/types";
 
@@ -20,23 +21,45 @@ interface DashboardData {
   leadsByStaff: { staffId: string; name: string; count: number }[];
 }
 
-function Stat({ label, value, hint, href }: { label: string; value: string | number; hint?: string; href?: string }) {
+const TONES: Record<string, { bg: string; ring: string }> = {
+  blue: { bg: "from-blue-50 to-blue-100", ring: "ring-blue-100" },
+  emerald: { bg: "from-emerald-50 to-emerald-100", ring: "ring-emerald-100" },
+  amber: { bg: "from-amber-50 to-amber-100", ring: "ring-amber-100" },
+  violet: { bg: "from-violet-50 to-violet-100", ring: "ring-violet-100" },
+  cyan: { bg: "from-cyan-50 to-cyan-100", ring: "ring-cyan-100" },
+  indigo: { bg: "from-indigo-50 to-indigo-100", ring: "ring-indigo-100" },
+  green: { bg: "from-green-50 to-green-100", ring: "ring-green-100" },
+  fuchsia: { bg: "from-fuchsia-50 to-fuchsia-100", ring: "ring-fuchsia-100" },
+};
+
+function Stat({
+  icon, tone, label, value, hint, href,
+}: { icon: string; tone: keyof typeof TONES; label: string; value: string | number; hint?: string; href?: string }) {
+  const t = TONES[tone];
   const inner = (
     <Card className="group relative overflow-hidden p-4 transition hover:-translate-y-0.5 hover:shadow-card-hover">
-      <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-brand-500/60 via-brand-400/30 to-transparent opacity-0 transition group-hover:opacity-100" />
-      <div className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="mt-1 text-2xl font-semibold tracking-tight text-slate-800">{value}</div>
-      {hint && <div className="mt-0.5 text-xs text-slate-400">{hint}</div>}
+      <div className="flex items-start gap-3">
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${t.bg} text-lg ring-1 ring-inset ${t.ring}`}>
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <div className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</div>
+          <div className="mt-0.5 truncate text-2xl font-semibold tracking-tight text-slate-800">{value}</div>
+          {hint && <div className="mt-0.5 text-xs text-slate-400">{hint}</div>}
+        </div>
+      </div>
     </Card>
   );
   return href ? <Link href={href}>{inner}</Link> : inner;
 }
 
-function BarList({ title, rows }: { title: string; rows: { label: string; count: number }[] }) {
+function BarList({ icon, title, rows }: { icon: string; title: string; rows: { label: string; count: number }[] }) {
   const max = Math.max(...rows.map((r) => r.count), 1);
   return (
     <Card className="p-4">
-      <h3 className="mb-3 text-sm font-semibold">{title}</h3>
+      <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold">
+        <span>{icon}</span> {title}
+      </h3>
       {rows.length === 0 && <p className="text-sm text-slate-400">No data yet</p>}
       <div className="space-y-2">
         {rows.map((r) => (
@@ -53,7 +76,15 @@ function BarList({ title, rows }: { title: string; rows: { label: string; count:
   );
 }
 
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
 export default function DashboardPage() {
+  const { user } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,23 +100,28 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-lg font-semibold">Dashboard</h1>
+      <div>
+        <h1 className="text-lg font-semibold tracking-tight text-slate-800">
+          👋 {greeting()}{user ? `, ${user.name.split(" ")[0]}` : ""}
+        </h1>
+        <p className="text-sm text-slate-500">Here&rsquo;s what&rsquo;s happening across your pipeline today.</p>
+      </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label="Total leads" value={data.totalLeads} href="/leads" />
-        <Stat label="New today" value={data.newToday} />
-        <Stat label="Follow-ups due" value={data.followUpsDueToday} hint="today" href="/leads?followUpDue=true" />
-        <Stat label="Conversion rate" value={`${data.conversionRate}%`} />
-        <Stat label="Properties available" value={data.propertiesAvailable} href="/properties" />
-        <Stat label="Shared today" value={data.propertiesSharedToday} hint="via WhatsApp" />
-        <Stat label="WhatsApp sent today" value={data.whatsappSentToday} />
-        <Stat label="Partner-shared leads" value={data.partnerSharedLeads} href="/partners" />
+        <Stat icon="👥" tone="blue" label="Total leads" value={data.totalLeads} href="/leads" />
+        <Stat icon="✨" tone="emerald" label="New today" value={data.newToday} />
+        <Stat icon="📅" tone="amber" label="Follow-ups due" value={data.followUpsDueToday} hint="today" href="/leads?followUpDue=true" />
+        <Stat icon="🎯" tone="violet" label="Conversion rate" value={`${data.conversionRate}%`} />
+        <Stat icon="🏘️" tone="cyan" label="Properties available" value={data.propertiesAvailable} href="/properties" />
+        <Stat icon="📤" tone="indigo" label="Shared today" value={data.propertiesSharedToday} hint="via WhatsApp" />
+        <Stat icon="💬" tone="green" label="WhatsApp sent today" value={data.whatsappSentToday} />
+        <Stat icon="🤝" tone="fuchsia" label="Partner-shared leads" value={data.partnerSharedLeads} href="/partners" />
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
-        <BarList title="Leads by source" rows={data.leadsBySource.map((s) => ({ label: labelize(s.source), count: s.count }))} />
-        <BarList title="Leads by pipeline stage" rows={data.leadsByStage.filter((s) => s.count > 0).map((s) => ({ label: labelize(s.stage), count: s.count }))} />
+        <BarList icon="📊" title="Leads by source" rows={data.leadsBySource.map((s) => ({ label: labelize(s.source), count: s.count }))} />
+        <BarList icon="🪜" title="Leads by pipeline stage" rows={data.leadsByStage.filter((s) => s.count > 0).map((s) => ({ label: labelize(s.stage), count: s.count }))} />
       </div>
       {data.leadsByStaff.length > 0 && (
-        <BarList title="Leads per staff member" rows={data.leadsByStaff.map((s) => ({ label: s.name, count: s.count }))} />
+        <BarList icon="🧑‍💼" title="Leads per staff member" rows={data.leadsByStaff.map((s) => ({ label: s.name, count: s.count }))} />
       )}
     </div>
   );

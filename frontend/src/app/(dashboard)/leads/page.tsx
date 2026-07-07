@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { api, qs } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import LeadForm from "@/components/LeadForm";
-import { Badge, Button, Card, EmptyState, ErrorBanner, Input, Modal, Pagination, Select, Spinner } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, ErrorBanner, Input, Modal, PageHeader, Pagination, Select, Spinner } from "@/components/ui";
 import {
   LEAD_SOURCES, LEAD_STATUSES, Lead, PROPERTY_TYPES, Paginated, User,
   fmtDate, fmtMoney, labelize,
@@ -18,7 +18,7 @@ function LeadsContent() {
   const [result, setResult] = useState<Paginated<Lead> | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(params.get("q") ?? "");
   const [status, setStatus] = useState("");
   const [source, setSource] = useState("");
   const [propertyType, setPropertyType] = useState("");
@@ -66,10 +66,12 @@ function LeadsContent() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-lg font-semibold">Leads</h1>
-        {hasRole("SALES_MANAGER", "SALES_EXECUTIVE") && (
-          <div className="flex gap-2">
+      <PageHeader
+        icon="👥"
+        title="CRM Pipeline"
+        subtitle="Track leads from first contact through to conversion"
+        actions={hasRole("SALES_MANAGER", "SALES_EXECUTIVE") && (
+          <>
             <input
               ref={fileRef}
               type="file"
@@ -77,11 +79,11 @@ function LeadsContent() {
               className="hidden"
               onChange={(e) => e.target.files?.[0] && importCsv(e.target.files[0])}
             />
-            <Button variant="secondary" onClick={() => fileRef.current?.click()}>Import CSV</Button>
+            <Button variant="secondary" onClick={() => fileRef.current?.click()}>📤 Import CSV</Button>
             <Button onClick={() => setShowCreate(true)}>+ New lead</Button>
-          </div>
+          </>
         )}
-      </div>
+      />
 
       {importResult && (
         <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700">

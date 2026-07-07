@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Button, Select } from "@/components/ui";
+import { Button, PageHeader, Select } from "@/components/ui";
 import { Lead, Paginated, Property } from "@/lib/types";
 
 type ActionKey = "sales-pitch" | "investment-proposal" | "price-predictor" | "agreement-draft";
@@ -93,10 +93,7 @@ export default function AiAgentPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-lg font-semibold">AI Operating Agent</h1>
-        <p className="text-sm text-slate-500">Automate pitches, proposals, price predictions, and agreement drafts using real inventory and lead data.</p>
-      </div>
+      <PageHeader icon="✨" title="AI Operating Agent" subtitle="Automate pitches, proposals, price predictions, and agreement drafts using real inventory and lead data" />
 
       <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
         {/* Prompt generator sidebar */}

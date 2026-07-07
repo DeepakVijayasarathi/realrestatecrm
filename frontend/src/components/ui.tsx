@@ -123,6 +123,25 @@ export function Card({ children, className = "" }: { children: React.ReactNode; 
   return <div className={`rounded-xl border border-slate-200/80 bg-white shadow-card ${className}`}>{children}</div>;
 }
 
+export function PageHeader({
+  icon, title, subtitle, actions,
+}: { icon: string; title: string; subtitle?: string; actions?: React.ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex items-center gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-50 to-brand-100 text-xl ring-1 ring-inset ring-brand-100">
+          {icon}
+        </div>
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight text-slate-800">{title}</h1>
+          {subtitle && <p className="text-sm text-slate-500">{subtitle}</p>}
+        </div>
+      </div>
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+    </div>
+  );
+}
+
 export function Modal({
   open, onClose, title, children, wide,
 }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode; wide?: boolean }) {

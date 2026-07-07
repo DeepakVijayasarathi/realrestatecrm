@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Badge, Button, Card, EmptyState, ErrorBanner, Field, Input, Modal, Select, Spinner, Textarea } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, ErrorBanner, Field, Input, Modal, PageHeader, Select, Spinner, Textarea } from "@/components/ui";
 import { PARTNER_SHARE_STATUSES, PartnerCompany, fmtDate, fmtMoney, labelize } from "@/lib/types";
 
 interface Share {
@@ -97,10 +97,12 @@ export default function PartnersPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">{isPartner ? "Shared leads" : "Partner companies"}</h1>
-        {canManage && <Button onClick={() => openForm()}>+ Add partner</Button>}
-      </div>
+      <PageHeader
+        icon="🤝"
+        title={isPartner ? "Shared Leads" : "Vendor Network"}
+        subtitle={isPartner ? "Leads referred to your company" : "Manage partner companies and track shared referrals"}
+        actions={canManage && <Button onClick={() => openForm()}>+ Add partner</Button>}
+      />
       <ErrorBanner message={error} />
 
       <div className="grid gap-4 lg:grid-cols-3">

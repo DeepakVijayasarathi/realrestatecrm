@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { api, qs } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Badge, Button, Card, EmptyState, ErrorBanner, Input, Pagination, Select, Spinner } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, ErrorBanner, Input, PageHeader, Pagination, Select, Spinner } from "@/components/ui";
 import { AVAILABILITY, PROPERTY_CATEGORIES, PROPERTY_TYPES, Paginated, Property, fmtMoney, labelize } from "@/lib/types";
 import { BuildingIcon } from "@/components/icons";
 
@@ -52,16 +52,18 @@ export default function PropertiesPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-lg font-semibold">Properties</h1>
-        {canEdit && (
-          <div className="flex gap-2">
+      <PageHeader
+        icon="🏘️"
+        title="Properties Inventory"
+        subtitle="Browse, list, and manage your property catalog"
+        actions={canEdit && (
+          <>
             <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={(e) => e.target.files?.[0] && importCsv(e.target.files[0])} />
-            <Button variant="secondary" onClick={() => fileRef.current?.click()}>Import CSV</Button>
+            <Button variant="secondary" onClick={() => fileRef.current?.click()}>📤 Import CSV</Button>
             <Link href="/properties/new"><Button>+ Add property</Button></Link>
-          </div>
+          </>
         )}
-      </div>
+      />
 
       {importResult && (
         <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700">

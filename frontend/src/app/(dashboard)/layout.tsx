@@ -59,6 +59,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
+  const [searchValue, setSearchValue] = useState("");
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -142,12 +143,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/80 px-4 backdrop-blur-md lg:px-6">
+        <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-3 border-b border-slate-200/80 bg-white/80 px-4 backdrop-blur-md lg:px-6">
           <button className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden" onClick={() => setMenuOpen(true)}>
             <MenuIcon className="h-5 w-5" />
           </button>
-          <div className="hidden text-sm text-slate-500 lg:block">
-            {new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (searchValue.trim()) router.push(`/leads?q=${encodeURIComponent(searchValue.trim())}`);
+            }}
+            className="hidden max-w-sm flex-1 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-500 transition focus-within:border-brand-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-500/15 lg:flex"
+          >
+            <span>🔍</span>
+            <input
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              placeholder="Search leads by name, phone, or email…"
+              className="w-full bg-transparent text-slate-700 outline-none placeholder:text-slate-400"
+            />
+          </form>
+          <div className="hidden text-sm text-slate-500 xl:block">
+            📆 {new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
           </div>
           <div className="flex items-center gap-2.5">
             <div className="relative">
@@ -165,7 +181,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {notifOpen && (
                 <div className="animate-pop-in absolute right-0 mt-2 max-h-96 w-80 overflow-y-auto rounded-xl border border-slate-200/80 bg-white shadow-pop">
                   <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
-                    <span className="text-sm font-semibold">Notifications</span>
+                    <span className="text-sm font-semibold">🔔 Notifications</span>
                     {unread > 0 && (
                       <button className="text-xs text-brand-600 hover:underline" onClick={markAllRead}>Mark all read</button>
                     )}
@@ -193,11 +209,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
               <div className="hidden text-right sm:block">
                 <div className="text-sm font-medium leading-tight">{user.name}</div>
-                <div className="text-[11px] capitalize text-slate-500">{user.role.replaceAll("_", " ").toLowerCase()}</div>
+                <div className="text-[11px] font-medium capitalize text-brand-600">{user.role.replaceAll("_", " ").toLowerCase()}</div>
               </div>
             </div>
             <button onClick={logout} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50">
-              Logout
+              🚪 Logout
             </button>
           </div>
         </header>
