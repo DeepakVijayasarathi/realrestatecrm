@@ -119,7 +119,7 @@ router.get("/", async (req, res, next) => {
   try {
     const {
       q, status, stage, source, assignedToId, partnerId, propertyType,
-      priority, budgetMin, budgetMax, from, to, followUpDue,
+      priority, budgetMin, budgetMax, from, to, followUpDue, hasFollowUp,
       page = "1", pageSize = "20", sort = "createdAt:desc",
     } = req.query as Record<string, string>;
 
@@ -151,6 +151,8 @@ router.get("/", async (req, res, next) => {
         from ? { createdAt: { gte: new Date(from) } } : {},
         to ? { createdAt: { lte: new Date(to) } } : {},
         followUpDue === "true" ? { followUpAt: { lte: endOfToday }, status: { notIn: ["CONVERTED", "CLOSED_LOST", "INVALID"] } } : {},
+        // Site Visits & Appts view: any lead with a scheduled follow-up/visit, past or future
+        hasFollowUp === "true" ? { followUpAt: { not: null }, status: { notIn: ["CONVERTED", "CLOSED_LOST", "INVALID"] } } : {},
       ],
     };
 

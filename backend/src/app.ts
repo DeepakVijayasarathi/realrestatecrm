@@ -13,6 +13,7 @@ import whatsappRoutes from "./modules/whatsapp/whatsapp.routes";
 import notificationsRoutes from "./modules/notifications/notifications.routes";
 import reportsRoutes from "./modules/reports/reports.routes";
 import settingsRoutes from "./modules/settings/settings.routes";
+import aiRoutes from "./modules/ai/ai.routes";
 
 export function createApp() {
   const app = express();
@@ -33,6 +34,7 @@ export function createApp() {
   app.use("/api/notifications", notificationsRoutes);
   app.use("/api/reports", reportsRoutes);
   app.use("/api/settings", settingsRoutes);
+  app.use("/api/ai", aiRoutes);
 
   app.use(errorHandler);
   return app;

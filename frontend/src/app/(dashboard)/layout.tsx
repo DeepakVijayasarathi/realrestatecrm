@@ -7,18 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { Spinner } from "@/components/ui";
 import { fmtDate } from "@/lib/types";
-import {
-  BellIcon,
-  BriefcaseIcon,
-  BuildingIcon,
-  KanbanIcon,
-  LayoutDashboardIcon,
-  MenuIcon,
-  SettingsIcon,
-  TrendingUpIcon,
-  UserIcon,
-  UsersIcon,
-} from "@/components/icons";
+import { BellIcon, MenuIcon } from "@/components/icons";
 
 interface Notification {
   id: string;
@@ -29,15 +18,37 @@ interface Notification {
   meta?: { leadId?: string } | null;
 }
 
-const NAV = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboardIcon, roles: null },
-  { href: "/leads", label: "Leads", icon: UsersIcon, roles: ["SALES_MANAGER", "SALES_EXECUTIVE", "PARTNER_USER"] },
-  { href: "/pipeline", label: "Pipeline", icon: KanbanIcon, roles: ["SALES_MANAGER", "SALES_EXECUTIVE"] },
-  { href: "/properties", label: "Properties", icon: BuildingIcon, roles: null },
-  { href: "/partners", label: "Partners", icon: BriefcaseIcon, roles: ["SALES_MANAGER", "SALES_EXECUTIVE", "PARTNER_USER"] },
-  { href: "/reports", label: "Reports", icon: TrendingUpIcon, roles: ["SALES_MANAGER"] },
-  { href: "/users", label: "Users", icon: UserIcon, roles: [] },
-  { href: "/settings", label: "Settings", icon: SettingsIcon, roles: ["SALES_MANAGER"] },
+const NAV_SECTIONS = [
+  {
+    title: "Core Operations",
+    items: [
+      { href: "/dashboard", label: "Dashboard", emoji: "📊", roles: null },
+      { href: "/leads", label: "CRM pipeline", emoji: "👥", roles: ["SALES_MANAGER", "SALES_EXECUTIVE", "PARTNER_USER"] },
+      { href: "/properties", label: "Properties Inventory", emoji: "🏘️", roles: null },
+      { href: "/partners", label: "Vendor Network", emoji: "🤝", roles: ["SALES_MANAGER", "SALES_EXECUTIVE", "PARTNER_USER"] },
+      { href: "/site-visits", label: "Site Visits & Appts", emoji: "📅", roles: ["SALES_MANAGER", "SALES_EXECUTIVE"] },
+    ],
+  },
+  {
+    title: "AI & Channels",
+    items: [
+      { href: "/ai-agent", label: "AI Operating Agent", emoji: "✨", roles: ["SALES_MANAGER", "SALES_EXECUTIVE", "PROPERTY_STAFF"] },
+    ],
+  },
+  {
+    title: "Insights",
+    items: [
+      { href: "/pipeline", label: "Pipeline Board", emoji: "🗂️", roles: ["SALES_MANAGER", "SALES_EXECUTIVE"] },
+      { href: "/reports", label: "Reports", emoji: "📈", roles: ["SALES_MANAGER"] },
+    ],
+  },
+  {
+    title: "Administration",
+    items: [
+      { href: "/users", label: "Users", emoji: "👤", roles: [] },
+      { href: "/settings", label: "Settings", emoji: "⚙️", roles: ["SALES_MANAGER"] },
+    ],
+  },
 ] as const;
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -67,7 +78,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (loading || !user) return <Spinner />;
 
-  const visibleNav = NAV.filter((item) => item.roles === null || hasRole(...(item.roles as unknown as Parameters<typeof hasRole>)));
+  const visibleSections = NAV_SECTIONS
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => item.roles === null || hasRole(...(item.roles as unknown as Parameters<typeof hasRole>))),
+    }))
+    .filter((section) => section.items.length > 0);
 
   async function markAllRead() {
     await api.post("/notifications/read-all").catch(() => {});
@@ -90,27 +106,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-gold-400">Real Estate CRM</div>
           </div>
         </div>
-        <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
-          <p className="px-3 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Menu</p>
-          {visibleNav.map((item) => {
-            const active = pathname.startsWith(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMenuOpen(false)}
-                className={`group relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                  active
-                    ? "bg-white/10 text-white shadow-sm ring-1 ring-white/10"
-                    : "text-slate-400 hover:bg-white/5 hover:text-white"
-                }`}
-              >
-                {active && <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-gold-400" />}
-                <item.icon className={`h-4 w-4 shrink-0 transition ${active ? "text-gold-400" : "text-slate-500 group-hover:text-slate-300"}`} />
-                {item.label}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 space-y-4 overflow-y-auto p-3">
+          {visibleSections.map((section) => (
+            <div key={section.title}>
+              <p className="px-3 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">{section.title}</p>
+              <div className="space-y-0.5">
+                {section.items.map((item) => {
+                  const active = pathname.startsWith(item.href);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setMenuOpen(false)}
+                      className={`group relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                        active
+                          ? "bg-white/10 text-white shadow-sm ring-1 ring-white/10"
+                          : "text-slate-400 hover:bg-white/5 hover:text-white"
+                      }`}
+                    >
+                      {active && <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-gold-400" />}
+                      <span className="w-4 shrink-0 text-center leading-none">{item.emoji}</span>
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
         <div className="border-t border-white/10 p-4 text-[11px] text-slate-500">
           © {new Date().getFullYear()} RealRest

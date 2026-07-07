@@ -19,6 +19,11 @@ export const env = {
     integratedNumber: process.env.MSG91_INTEGRATED_NUMBER || "",
     whatsappUrl: process.env.MSG91_WHATSAPP_URL || "https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/",
   },
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY || "",
+    model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    apiUrl: process.env.OPENAI_API_URL || "https://api.openai.com/v1/chat/completions",
+  },
   smtp: {
     host: process.env.SMTP_HOST || "",
     port: Number(process.env.SMTP_PORT || 587),

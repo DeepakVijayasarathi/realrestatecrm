@@ -36,6 +36,10 @@ pipeline {
         MSG91_AUTH_KEY          = ""
         MSG91_INTEGRATED_NUMBER = ""
 
+        // OpenAI (powers the AI Operating Agent page) — from platform.openai.com
+        OPENAI_API_KEY = ""
+        OPENAI_MODEL   = "gpt-4o-mini"
+
         // Email (leave SMTP_HOST empty to log emails to console)
         SMTP_HOST = ""
         SMTP_PORT = "587"
@@ -115,6 +119,8 @@ pipeline {
                         -e WHATSAPP_ACCESS_TOKEN="${WHATSAPP_ACCESS_TOKEN}" \\
                         -e MSG91_AUTH_KEY="${MSG91_AUTH_KEY}" \\
                         -e MSG91_INTEGRATED_NUMBER="${MSG91_INTEGRATED_NUMBER}" \\
+                        -e OPENAI_API_KEY="${OPENAI_API_KEY}" \\
+                        -e OPENAI_MODEL="${OPENAI_MODEL}" \\
                         -e SMTP_HOST="${SMTP_HOST}" \\
                         -e SMTP_PORT="${SMTP_PORT}" \\
                         -e SMTP_USER="${SMTP_USER}" \\
@@ -218,6 +224,8 @@ pipeline {
                             -e WHATSAPP_ACCESS_TOKEN="${WHATSAPP_ACCESS_TOKEN}" \\
                             -e MSG91_AUTH_KEY="${MSG91_AUTH_KEY}" \\
                             -e MSG91_INTEGRATED_NUMBER="${MSG91_INTEGRATED_NUMBER}" \\
+                            -e OPENAI_API_KEY="${OPENAI_API_KEY}" \\
+                            -e OPENAI_MODEL="${OPENAI_MODEL}" \\
                             -e SMTP_HOST="${SMTP_HOST}" \\
                             -e SMTP_PORT="${SMTP_PORT}" \\
                             -e SMTP_USER="${SMTP_USER}" \\
