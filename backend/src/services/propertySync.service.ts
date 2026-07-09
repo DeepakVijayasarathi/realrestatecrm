@@ -1,5 +1,5 @@
 import { Property } from "@prisma/client";
-import { env } from "../config/env";
+import { getIntegrationSettings } from "./integrationSettings.service";
 
 export type SyncAction = "created" | "updated" | "deleted";
 
@@ -9,20 +9,21 @@ export type SyncAction = "created" | "updated" | "deleted";
  *
  * Best-effort and fire-and-forget by design: a slow or failing website endpoint must
  * never block or fail the CRM's own create/update/delete request. Logs to the console
- * (rather than calling out) when WEBSITE_API_URL isn't configured, so this is safe to
- * leave wired up in every environment including local dev.
+ * (rather than calling out) when it isn't configured in Settings → Integrations, so
+ * this is safe to leave wired up in every environment including local dev.
  */
 export async function pushPropertyToWebsite(property: Property, action: SyncAction): Promise<void> {
-  if (!env.websiteSync.apiUrl) {
-    console.log(`[propertySync:mock] ${action} → ${property.id} (${property.title}) — WEBSITE_API_URL not configured`);
+  const settings = (await getIntegrationSettings()).websiteSync;
+  if (!settings.apiUrl) {
+    console.log(`[propertySync:mock] ${action} → ${property.id} (${property.title}) — website sync not configured`);
     return;
   }
   try {
-    const res = await fetch(`${env.websiteSync.apiUrl}/properties/${property.externalId ?? property.id}`, {
+    const res = await fetch(`${settings.apiUrl}/properties/${property.externalId ?? property.id}`, {
       method: action === "deleted" ? "DELETE" : "PUT",
       headers: {
         "Content-Type": "application/json",
-        ...(env.websiteSync.apiKey ? { Authorization: `Bearer ${env.websiteSync.apiKey}` } : {}),
+        ...(settings.apiKey ? { Authorization: `Bearer ${settings.apiKey}` } : {}),
       },
       body: action === "deleted" ? undefined : JSON.stringify(toWebsitePayload(property)),
     });

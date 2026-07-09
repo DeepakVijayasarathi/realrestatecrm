@@ -1,6 +1,6 @@
 import { Lead, NotificationType, PipelineStage } from "@prisma/client";
 import { prisma } from "../lib/prisma";
-import { renderTemplate, whatsappProvider } from "./whatsapp.service";
+import { renderTemplate, sendWhatsApp } from "./whatsapp.service";
 import { notify } from "./notification.service";
 
 type Agent = { id: string; name: string } | null;
@@ -36,7 +36,7 @@ export async function runStageAutomation(lead: Lead, toStage: PipelineStage, age
       time: scheduledTime,
     });
 
-    const result = await whatsappProvider.sendText(toNumber, body, lead.fullName);
+    const result = await sendWhatsApp(toNumber, body, lead.fullName);
     await prisma.whatsAppLog.create({
       data: {
         leadId: lead.id,

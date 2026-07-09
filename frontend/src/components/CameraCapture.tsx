@@ -109,7 +109,7 @@ export default function CameraCapture({ open, onClose, onCapture }: Props) {
     <div className="animate-fade-in fixed inset-0 z-[110] flex flex-col bg-slate-950">
       <div className="flex items-center justify-between px-4 py-3 text-white">
         <span className="text-sm font-medium">{shot ? "Review photo" : "Take property photo"}</span>
-        <button onClick={onClose} className="rounded-full p-1.5 hover:bg-white/10"><XIcon className="h-5 w-5" /></button>
+        <button type="button" onClick={onClose} className="rounded-full p-1.5 hover:bg-white/10"><XIcon className="h-5 w-5" /></button>
       </div>
 
       <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-black">
@@ -129,11 +129,11 @@ export default function CameraCapture({ open, onClose, onCapture }: Props) {
 
       <div className="flex items-center justify-center gap-4 bg-slate-950 px-4 py-5">
         {error ? (
-          <Button variant="secondary" onClick={onClose}>Close</Button>
+          <Button type="button" variant="secondary" onClick={onClose}>Close</Button>
         ) : shot ? (
           <>
-            <Button variant="secondary" onClick={retake}><RefreshCwIcon className="mr-1.5 inline h-4 w-4" />Retake</Button>
-            <Button onClick={usePhoto}>Use photo</Button>
+            <Button type="button" variant="secondary" onClick={retake}><RefreshCwIcon className="mr-1.5 inline h-4 w-4" />Retake</Button>
+            <Button type="button" onClick={usePhoto}>Use photo</Button>
           </>
         ) : (
           <>

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { AvailabilityStatus, FurnishingStatus, PropertyCategory, PropertyType } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
-import { env } from "../../config/env";
+import { getIntegrationSettings } from "../../services/integrationSettings.service";
 import { validate } from "../../middleware/validate";
 import { requireWebhookSecret } from "../../lib/webhookAuth";
 
@@ -38,7 +38,7 @@ const inboundPropertySchema = z.object({
 
 router.post(
   "/website/properties",
-  requireWebhookSecret(() => env.websiteSync.webhookSecret),
+  requireWebhookSecret(async () => (await getIntegrationSettings()).websiteSync.webhookSecret),
   validate(inboundPropertySchema),
   async (req, res, next) => {
     try {

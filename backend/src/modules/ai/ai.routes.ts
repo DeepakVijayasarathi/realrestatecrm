@@ -2,7 +2,6 @@ import { Router } from "express";
 import { z } from "zod";
 import { Prisma, Role } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
-import { env } from "../../config/env";
 import { badRequest, forbidden, notFound } from "../../lib/errors";
 import { AuthUser, requireAuth, requireRole } from "../../middleware/auth";
 import { validate } from "../../middleware/validate";
@@ -65,7 +64,7 @@ const SYSTEM_PROMPT =
 /** Runs the AI call and records token usage + estimated cost against the requesting user,
  * so the cost-tracking screen reflects every feature from one place instead of five. */
 async function runAi(user: AuthUser, feature: string, prompt: string) {
-  const { text, usage } = await askOpenAI([
+  const { text, usage, model } = await askOpenAI([
     { role: "system", content: SYSTEM_PROMPT },
     { role: "user", content: prompt },
   ]);
@@ -74,7 +73,7 @@ async function runAi(user: AuthUser, feature: string, prompt: string) {
       data: {
         userId: user.id,
         feature,
-        model: env.openai.model,
+        model,
         promptTokens: usage.promptTokens,
         completionTokens: usage.completionTokens,
         totalTokens: usage.totalTokens,

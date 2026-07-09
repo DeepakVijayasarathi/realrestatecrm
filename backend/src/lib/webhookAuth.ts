@@ -17,13 +17,17 @@ declare global {
  * no secret is configured at all, since that means the integration was never set up rather
  * than a caller failing auth.
  */
-export function requireWebhookSecret(getExpected: () => string, headerName = "x-webhook-secret") {
-  return (req: Request, _res: Response, next: NextFunction) => {
-    const expected = getExpected();
-    if (!expected) return next(new HttpError(503, "This webhook is not configured"));
-    const provided = req.header(headerName);
-    if (!provided || provided !== expected) return next(new HttpError(401, "Invalid or missing webhook secret"));
-    next();
+export function requireWebhookSecret(getExpected: () => string | Promise<string>, headerName = "x-webhook-secret") {
+  return async (req: Request, _res: Response, next: NextFunction) => {
+    try {
+      const expected = await getExpected();
+      if (!expected) return next(new HttpError(503, "This webhook is not configured"));
+      const provided = req.header(headerName);
+      if (!provided || provided !== expected) return next(new HttpError(401, "Invalid or missing webhook secret"));
+      next();
+    } catch (err) {
+      next(err);
+    }
   };
 }
 

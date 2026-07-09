@@ -188,5 +188,15 @@ export const openApiSpec = {
     "/users": crud("Users", "user"),
     "/notifications": { get: { tags: ["Notifications"], summary: "My notifications", security: bearer, responses: { "200": { description: "OK" } } } },
     "/settings": { get: { tags: ["Settings"], summary: "All settings", security: bearer, responses: { "200": { description: "OK" } } } },
+    "/settings/integrations": { get: { tags: ["Settings"], summary: "WhatsApp/OpenAI/Meta/website-sync/lead-webhook config, secrets masked (Super Admin only)", security: bearer, responses: { "200": { description: "OK" } } } },
+    "/settings/integrations/{section}": {
+      put: {
+        tags: ["Settings"],
+        summary: "Update one integration section — whatsapp | openai | meta | websiteSync | leadWebhook (Super Admin only)",
+        security: bearer,
+        parameters: [{ name: "section", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "Updated (secrets masked in response)" } },
+      },
+    },
   },
 };

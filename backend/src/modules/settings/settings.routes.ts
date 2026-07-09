@@ -1,9 +1,18 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma";
+import { badRequest } from "../../lib/errors";
 import { requireAuth, requireRole } from "../../middleware/auth";
 import { validate } from "../../middleware/validate";
 import { audit } from "../../services/audit.service";
+import {
+  IntegrationSettings,
+  getIntegrationSettings,
+  maskAll,
+  maskSection,
+  stripUnchangedSecrets,
+  updateIntegrationSection,
+} from "../../services/integrationSettings.service";
 
 const router = Router();
 router.use(requireAuth);
@@ -17,6 +26,40 @@ router.get("/", async (_req, res, next) => {
     next(err);
   }
 });
+
+// ── Integrations (WhatsApp, OpenAI, Meta Lead Ads, website sync, lead webhooks) ──
+// Super Admin only — these are third-party credentials, not general workspace prefs.
+// Secrets are masked on read; a PUT that echoes a masked value back leaves it unchanged.
+const INTEGRATION_SECTIONS = ["whatsapp", "openai", "meta", "websiteSync", "leadWebhook"] as const;
+
+router.get("/integrations", requireRole(), async (_req, res, next) => {
+  try {
+    const settings = await getIntegrationSettings();
+    res.json({ data: maskAll(settings) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put(
+  "/integrations/:section",
+  requireRole(),
+  validate(z.object({ value: z.record(z.unknown()) })),
+  async (req, res, next) => {
+    try {
+      const section = req.params.section as keyof IntegrationSettings;
+      if (!INTEGRATION_SECTIONS.includes(section as (typeof INTEGRATION_SECTIONS)[number])) {
+        throw badRequest(`Unknown integration section "${req.params.section}"`);
+      }
+      const patch = stripUnchangedSecrets(section, req.body.value as Record<string, unknown>);
+      const updated = await updateIntegrationSection(section, patch);
+      await audit(req.user!.id, "integration_settings_updated", "setting", section);
+      res.json({ data: maskSection(section, updated) });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 router.put(
   "/:key",

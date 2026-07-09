@@ -1,5 +1,5 @@
 import { MessageStatus } from "@prisma/client";
-import { env } from "../config/env";
+import { WhatsAppSettings, getIntegrationSettings } from "./integrationSettings.service";
 
 export interface SendResult {
   status: MessageStatus;
@@ -13,13 +13,14 @@ export interface WhatsAppProvider {
 
 /** WhatsApp Cloud API (Meta Graph API) provider. */
 class CloudApiProvider implements WhatsAppProvider {
+  constructor(private settings: WhatsAppSettings) {}
   async sendText(toNumber: string, body: string): Promise<SendResult> {
-    const url = `${env.whatsapp.apiUrl}/${env.whatsapp.phoneNumberId}/messages`;
+    const url = `${this.settings.cloudApiUrl}/${this.settings.phoneNumberId}/messages`;
     try {
       const res = await fetch(url, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${env.whatsapp.accessToken}`,
+          Authorization: `Bearer ${this.settings.accessToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -47,18 +48,19 @@ class CloudApiProvider implements WhatsAppProvider {
  * requires an approved template, which is account-specific.
  */
 class Msg91Provider implements WhatsAppProvider {
+  constructor(private settings: WhatsAppSettings) {}
   async sendText(toNumber: string, body: string): Promise<SendResult> {
     // MSG91 expects numbers as digits with country code, no "+"
     const to = toNumber.replace(/\D/g, "");
     try {
-      const res = await fetch(env.msg91.whatsappUrl, {
+      const res = await fetch(this.settings.msg91WhatsappUrl, {
         method: "POST",
         headers: {
-          authkey: env.msg91.authKey,
+          authkey: this.settings.msg91AuthKey,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          integrated_number: env.msg91.integratedNumber.replace(/\D/g, ""),
+          integrated_number: this.settings.msg91IntegratedNumber.replace(/\D/g, ""),
           content_type: "text",
           recipient_number: to,
           text: body,
@@ -86,32 +88,38 @@ class Msg91Provider implements WhatsAppProvider {
  * The rest of this app already renders one final message string per send (via
  * renderTemplate() against our own WhatsAppTemplate rows), so bridging the two means
  * the SmartPing campaign's template must have exactly ONE variable that holds the
- * whole rendered message — set SMARTPING_CAMPAIGN_NAME to that campaign's name.
+ * whole rendered message — set the campaign name in Settings → Integrations.
  *
  * Template to submit for Meta approval (in Meta Business Manager → WhatsApp Manager
  * → Message Templates, or wherever SmartPing's dashboard forwards the request to):
+ *   Name:     realrest_notification
  *   Category: UTILITY
  *   Language: English (en_US)
- *   Body:     {{1}}
+ *   Body:     *RealRest CRM*<br><br>{{1}}<br><br>_Sent via RealRest CRM_
+ * (Meta/WhatsApp templates cannot start or end with a variable — the bolded opener
+ * and italic signature line are the minimum static text needed to satisfy that rule
+ * while keeping our one rendered message in a single {{1}} slot. Note Meta may
+ * auto-reclassify a minimal template like this from Utility to Marketing on review.)
  *
- *             _Sent via RealRest CRM_
  * Once Meta approves it, create a Live "campaign" in SmartPing pointing at that
- * template and put its name in SMARTPING_CAMPAIGN_NAME. If your approved template
- * instead has multiple named variables, this integration needs adjusting to pass a
- * matching templateParams array instead of a single-element one.
+ * template — it's that CAMPAIGN's name (not the template name above) that goes in
+ * the Settings → Integrations → WhatsApp "SmartPing campaign name" field. If your
+ * approved template instead has multiple named variables, this integration needs
+ * adjusting to pass a matching templateParams array.
  */
 class SmartPingProvider implements WhatsAppProvider {
+  constructor(private settings: WhatsAppSettings) {}
   async sendText(toNumber: string, body: string, contactName?: string): Promise<SendResult> {
-    if (!env.smartping.apiKey || !env.smartping.campaignName) {
-      return { status: MessageStatus.FAILED, error: "SmartPing is not configured — set SMARTPING_API_KEY and SMARTPING_CAMPAIGN_NAME" };
+    if (!this.settings.smartpingApiKey || !this.settings.smartpingCampaignName) {
+      return { status: MessageStatus.FAILED, error: "SmartPing is not configured — set its API key and campaign name in Settings → Integrations" };
     }
     try {
       const res = await fetch("https://backend.api-wa.co/campaign/smartpingbsp/api/v2", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          apiKey: env.smartping.apiKey,
-          campaignName: env.smartping.campaignName,
+          apiKey: this.settings.smartpingApiKey,
+          campaignName: this.settings.smartpingCampaignName,
           destination: toNumber,
           userName: contactName || "Customer",
           source: "RealRest CRM",
@@ -139,11 +147,21 @@ class MockProvider implements WhatsAppProvider {
   }
 }
 
-export const whatsappProvider: WhatsAppProvider =
-  env.whatsapp.provider === "cloud" ? new CloudApiProvider()
-  : env.whatsapp.provider === "msg91" ? new Msg91Provider()
-  : env.whatsapp.provider === "smartping" ? new SmartPingProvider()
-  : new MockProvider();
+/**
+ * Builds the active provider from current settings on every call (cheap — these are
+ * just plain classes) rather than a module-level singleton, so switching providers or
+ * updating credentials from Settings → Integrations takes effect immediately without
+ * a server restart.
+ */
+export async function sendWhatsApp(toNumber: string, body: string, contactName?: string): Promise<SendResult> {
+  const settings = (await getIntegrationSettings()).whatsapp;
+  const provider: WhatsAppProvider =
+    settings.provider === "cloud" ? new CloudApiProvider(settings)
+    : settings.provider === "msg91" ? new Msg91Provider(settings)
+    : settings.provider === "smartping" ? new SmartPingProvider(settings)
+    : new MockProvider();
+  return provider.sendText(toNumber, body, contactName);
+}
 
 /** Replace {{placeholders}} in a template body with values. */
 export function renderTemplate(body: string, vars: Record<string, string>) {

@@ -1,5 +1,5 @@
-import { env } from "../config/env";
 import { badRequest } from "../lib/errors";
+import { getIntegrationSettings } from "./integrationSettings.service";
 
 interface ChatMessage {
   role: "system" | "user";
@@ -16,21 +16,25 @@ export interface AiUsage {
 export interface AiResponse {
   text: string;
   usage: AiUsage;
+  model: string;
 }
 
-/** Calls OpenAI's chat completions API. Throws a 400 if no key is configured, so the caller gets a clear message instead of a silent failure. */
+/** Calls OpenAI's chat completions API using whatever's configured in Settings →
+ * Integrations (falling back to env vars if never configured there). Throws a 400 if
+ * no key is set, so the caller gets a clear message instead of a silent failure. */
 export async function askOpenAI(messages: ChatMessage[]): Promise<AiResponse> {
-  if (!env.openai.apiKey) {
-    throw badRequest("AI features are not configured — set OPENAI_API_KEY on the server");
+  const settings = (await getIntegrationSettings()).openai;
+  if (!settings.apiKey) {
+    throw badRequest("AI features are not configured — set an OpenAI API key in Settings → Integrations");
   }
-  const res = await fetch(env.openai.apiUrl, {
+  const res = await fetch(settings.apiUrl, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${env.openai.apiKey}`,
+      Authorization: `Bearer ${settings.apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: env.openai.model,
+      model: settings.model,
       messages,
       temperature: 0.6,
     }),
@@ -49,11 +53,12 @@ export async function askOpenAI(messages: ChatMessage[]): Promise<AiResponse> {
   const promptTokens = data.usage?.prompt_tokens ?? 0;
   const completionTokens = data.usage?.completion_tokens ?? 0;
   const estimatedCostUsd =
-    (promptTokens / 1_000_000) * env.openai.inputPricePerMillion +
-    (completionTokens / 1_000_000) * env.openai.outputPricePerMillion;
+    (promptTokens / 1_000_000) * settings.inputPricePerMillion +
+    (completionTokens / 1_000_000) * settings.outputPricePerMillion;
 
   return {
     text,
+    model: settings.model,
     usage: {
       promptTokens,
       completionTokens,

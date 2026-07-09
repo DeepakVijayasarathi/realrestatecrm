@@ -20,6 +20,7 @@ import { maskPhone } from "../../lib/mask";
 import { toCsv } from "../../lib/csv";
 import { requireWebhookSecret, verifyMetaSignature } from "../../lib/webhookAuth";
 import { env } from "../../config/env";
+import { getIntegrationSettings } from "../../services/integrationSettings.service";
 import { AuthUser, requireAuth, requireRole, salesTeam } from "../../middleware/auth";
 import { validate } from "../../middleware/validate";
 import { fileUpload } from "../../middleware/upload";
@@ -27,7 +28,7 @@ import { logActivity } from "../../services/activity.service";
 import { notify } from "../../services/notification.service";
 import { audit } from "../../services/audit.service";
 import { matchPropertiesForLead } from "../../services/matching.service";
-import { renderTemplate, whatsappProvider } from "../../services/whatsapp.service";
+import { renderTemplate, sendWhatsApp } from "../../services/whatsapp.service";
 import { runStageAutomation } from "../../services/pipelineAutomation.service";
 import {
   assignSchema,
@@ -178,7 +179,7 @@ const websiteWebhookSchema = z.object({
 
 router.post(
   "/webhook/website",
-  requireWebhookSecret(() => env.leadWebhookSecret),
+  requireWebhookSecret(async () => (await getIntegrationSettings()).leadWebhook.secret),
   validate(websiteWebhookSchema),
   async (req, res, next) => {
     try {
@@ -205,7 +206,7 @@ const whatsappClickSchema = z.object({
 
 router.post(
   "/webhook/whatsapp-click",
-  requireWebhookSecret(() => env.leadWebhookSecret),
+  requireWebhookSecret(async () => (await getIntegrationSettings()).leadWebhook.secret),
   validate(whatsappClickSchema),
   async (req, res, next) => {
     try {
@@ -224,29 +225,35 @@ router.post(
 );
 
 // Meta Lead Ads (Facebook/Instagram). GET = webhook verification handshake; POST = lead event.
-router.get("/webhook/meta", (req, res) => {
-  const mode = req.query["hub.mode"];
-  const token = req.query["hub.verify_token"];
-  const challenge = req.query["hub.challenge"];
-  if (mode === "subscribe" && env.meta.verifyToken && token === env.meta.verifyToken) {
-    res.status(200).send(challenge);
-  } else {
-    res.sendStatus(403);
+router.get("/webhook/meta", async (req, res, next) => {
+  try {
+    const meta = (await getIntegrationSettings()).meta;
+    const mode = req.query["hub.mode"];
+    const token = req.query["hub.verify_token"];
+    const challenge = req.query["hub.challenge"];
+    if (mode === "subscribe" && meta.verifyToken && token === meta.verifyToken) {
+      res.status(200).send(challenge);
+    } else {
+      res.sendStatus(403);
+    }
+  } catch (err) {
+    next(err);
   }
 });
 
 router.post("/webhook/meta", async (req, res, next) => {
   try {
-    if (!env.meta.appSecret || !env.meta.pageAccessToken) return res.sendStatus(503);
+    const meta = (await getIntegrationSettings()).meta;
+    if (!meta.appSecret || !meta.pageAccessToken) return res.sendStatus(503);
     const signature = req.header("x-hub-signature-256");
-    if (!verifyMetaSignature(req.rawBody, signature, env.meta.appSecret)) return res.sendStatus(401);
+    if (!verifyMetaSignature(req.rawBody, signature, meta.appSecret)) return res.sendStatus(401);
 
     const entries = (req.body?.entry ?? []) as { changes?: { value?: { leadgen_id?: string } }[] }[];
     const leadgenIds = entries.flatMap((e) => e.changes ?? []).map((c) => c.value?.leadgen_id).filter(Boolean) as string[];
 
     for (const leadgenId of leadgenIds) {
       try {
-        const fdRes = await fetch(`${env.meta.graphApiUrl}/${leadgenId}?access_token=${env.meta.pageAccessToken}`);
+        const fdRes = await fetch(`${meta.graphApiUrl}/${leadgenId}?access_token=${meta.pageAccessToken}`);
         const fd = (await fdRes.json()) as { field_data?: { name: string; values: string[] }[] };
         const get = (key: string) => fd.field_data?.find((f) => f.name === key)?.values?.[0];
         const fullName = get("full_name") || [get("first_name"), get("last_name")].filter(Boolean).join(" ");
@@ -758,7 +765,7 @@ router.post("/:id/send-whatsapp", validate(sendWhatsAppSchema), async (req, res,
       throw badRequest("Provide propertyIds, a templateKey, or a customMessage");
     }
 
-    const result = await whatsappProvider.sendText(toNumber, body, lead.fullName);
+    const result = await sendWhatsApp(toNumber, body, lead.fullName);
 
     const log = await prisma.whatsAppLog.create({
       data: {
@@ -891,7 +898,7 @@ router.post("/:id/share-partner", validate(sharePartnerSchema), async (req, res,
           );
         }
       }
-      const waResult = await whatsappProvider.sendText(partnerNumber, lines.join("\n"), partner.name);
+      const waResult = await sendWhatsApp(partnerNumber, lines.join("\n"), partner.name);
       await prisma.whatsAppLog.create({
         data: {
           leadId: lead.id,
