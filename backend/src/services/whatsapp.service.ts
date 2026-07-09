@@ -134,6 +134,7 @@ class SmartPingProvider implements WhatsAppProvider {
           carouselCards: [],
           location: {},
           attributes: {},
+          paramsFallbackValue: {},
         }),
       });
       const raw = await res.text();
