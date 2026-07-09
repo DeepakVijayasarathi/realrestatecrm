@@ -85,10 +85,20 @@ class Msg91Provider implements WhatsAppProvider {
  *
  * The rest of this app already renders one final message string per send (via
  * renderTemplate() against our own WhatsAppTemplate rows), so bridging the two means
- * assuming your SmartPing campaign's template has a single variable that holds the
+ * the SmartPing campaign's template must have exactly ONE variable that holds the
  * whole rendered message — set SMARTPING_CAMPAIGN_NAME to that campaign's name.
- * If your approved template instead has multiple named variables, this integration
- * needs adjusting to pass a matching templateParams array.
+ *
+ * Template to submit for Meta approval (in Meta Business Manager → WhatsApp Manager
+ * → Message Templates, or wherever SmartPing's dashboard forwards the request to):
+ *   Category: UTILITY
+ *   Language: English (en_US)
+ *   Body:     {{1}}
+ *
+ *             _Sent via RealRest CRM_
+ * Once Meta approves it, create a Live "campaign" in SmartPing pointing at that
+ * template and put its name in SMARTPING_CAMPAIGN_NAME. If your approved template
+ * instead has multiple named variables, this integration needs adjusting to pass a
+ * matching templateParams array instead of a single-element one.
  */
 class SmartPingProvider implements WhatsAppProvider {
   async sendText(toNumber: string, body: string, contactName?: string): Promise<SendResult> {
