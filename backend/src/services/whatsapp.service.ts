@@ -8,7 +8,7 @@ export interface SendResult {
 }
 
 export interface WhatsAppProvider {
-  sendText(toNumber: string, body: string): Promise<SendResult>;
+  sendText(toNumber: string, body: string, contactName?: string): Promise<SendResult>;
 }
 
 /** WhatsApp Cloud API (Meta Graph API) provider. */
@@ -78,6 +78,49 @@ class Msg91Provider implements WhatsAppProvider {
   }
 }
 
+/**
+ * SmartPing (https://smartping.in) WhatsApp Business API — a campaign/template
+ * provider, not a free-form-text one: every send targets a pre-approved WhatsApp
+ * template ("campaign") and fills its {{n}} placeholders via `templateParams`.
+ *
+ * The rest of this app already renders one final message string per send (via
+ * renderTemplate() against our own WhatsAppTemplate rows), so bridging the two means
+ * assuming your SmartPing campaign's template has a single variable that holds the
+ * whole rendered message — set SMARTPING_CAMPAIGN_NAME to that campaign's name.
+ * If your approved template instead has multiple named variables, this integration
+ * needs adjusting to pass a matching templateParams array.
+ */
+class SmartPingProvider implements WhatsAppProvider {
+  async sendText(toNumber: string, body: string, contactName?: string): Promise<SendResult> {
+    if (!env.smartping.apiKey || !env.smartping.campaignName) {
+      return { status: MessageStatus.FAILED, error: "SmartPing is not configured — set SMARTPING_API_KEY and SMARTPING_CAMPAIGN_NAME" };
+    }
+    try {
+      const res = await fetch("https://backend.api-wa.co/campaign/smartpingbsp/api/v2", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          apiKey: env.smartping.apiKey,
+          campaignName: env.smartping.campaignName,
+          destination: toNumber,
+          userName: contactName || "Customer",
+          source: "RealRest CRM",
+          templateParams: [body],
+        }),
+      });
+      const raw = await res.text();
+      let data: { id?: string; messageId?: string; message?: string; error?: string; msg?: string } = {};
+      try { data = JSON.parse(raw); } catch { /* keep raw for the error message */ }
+      if (!res.ok) {
+        return { status: MessageStatus.FAILED, error: data.message || data.error || data.msg || raw.slice(0, 300) || `HTTP ${res.status}` };
+      }
+      return { status: MessageStatus.SENT, providerMessageId: data.id || data.messageId };
+    } catch (err) {
+      return { status: MessageStatus.FAILED, error: err instanceof Error ? err.message : "Network error" };
+    }
+  }
+}
+
 /** Development provider: logs the message and reports it as sent. */
 class MockProvider implements WhatsAppProvider {
   async sendText(toNumber: string, body: string): Promise<SendResult> {
@@ -89,6 +132,7 @@ class MockProvider implements WhatsAppProvider {
 export const whatsappProvider: WhatsAppProvider =
   env.whatsapp.provider === "cloud" ? new CloudApiProvider()
   : env.whatsapp.provider === "msg91" ? new Msg91Provider()
+  : env.whatsapp.provider === "smartping" ? new SmartPingProvider()
   : new MockProvider();
 
 /** Replace {{placeholders}} in a template body with values. */

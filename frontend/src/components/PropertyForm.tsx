@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { api, resolveMediaUrl } from "@/lib/api";
 import { Button, ErrorBanner, Field, Input, Select, Textarea } from "@/components/ui";
 import { AVAILABILITY, FURNISHING, PROPERTY_CATEGORIES, PROPERTY_TYPES, Property, labelize } from "@/lib/types";
-import { MapPinIcon, UploadIcon, XIcon } from "@/components/icons";
+import { CameraIcon, MapPinIcon, UploadIcon, XIcon } from "@/components/icons";
 import { extractYouTubeId } from "@/lib/youtube";
+import CameraCapture from "@/components/CameraCapture";
 
 export default function PropertyForm({ initial, onSaved }: { initial?: Property; onSaved?: (p: Property) => void }) {
   const isEdit = !!initial;
@@ -16,6 +17,7 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
   const [images, setImages] = useState(initial?.images ?? []);
   const [videoUrl, setVideoUrl] = useState(initial?.videoUrl ?? null);
   const [videoBusy, setVideoBusy] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
   const [form, setForm] = useState({
     title: initial?.title ?? "",
     type: initial?.type ?? "APARTMENT",
@@ -82,7 +84,7 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
     }
   }
 
-  async function uploadImages(files: FileList) {
+  async function uploadImages(files: FileList | File[]) {
     if (!initial) return;
     const fd = new FormData();
     for (const f of Array.from(files)) fd.append("images", f);
@@ -255,6 +257,13 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
               <UploadIcon className="h-4 w-4" /> Upload
               <input type="file" multiple accept="image/*" className="hidden" onChange={(e) => e.target.files && uploadImages(e.target.files)} />
             </label>
+            <button
+              type="button"
+              onClick={() => setShowCamera(true)}
+              className="flex h-24 w-32 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 text-xs text-slate-500 hover:border-brand-400"
+            >
+              <CameraIcon className="h-4 w-4" /> Take photo
+            </button>
           </div>
 
           <span className="mb-2 mt-4 block text-xs font-medium text-slate-600">Video tour</span>
@@ -289,6 +298,12 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
         <Button type="button" variant="secondary" onClick={() => router.back()}>Cancel</Button>
         <Button type="submit" disabled={busy}>{busy ? "Saving…" : isEdit ? "Save changes" : "Create property"}</Button>
       </div>
+
+      <CameraCapture
+        open={showCamera}
+        onClose={() => setShowCamera(false)}
+        onCapture={(file) => uploadImages([file])}
+      />
     </form>
   );
 }

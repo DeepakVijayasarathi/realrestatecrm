@@ -177,6 +177,7 @@ model User {
   auditLogs          AuditLog[]
   shortlists         PropertyMatch[]
   blogPosts          BlogPost[]
+  aiUsageLogs        AiUsageLog[]
 
   @@index([role])
   @@index([partnerCompanyId])
@@ -488,4 +489,26 @@ model BlogPost {
   updatedAt     DateTime  @updatedAt
 
   @@index([isPublished, publishedAt])
+}
+
+// ─── AI Operating Agent ─────────────────────────────────────────────
+
+// One row per OpenAI call, so managers can see what the AI features actually cost
+// (token usage is exact from the API response; USD cost is an estimate from the
+// per-model $/1M-token rates configured via env vars — real billing may differ slightly).
+model AiUsageLog {
+  id               String   @id @default(cuid())
+  user             User     @relation(fields: [userId], references: [id])
+  userId           String
+  feature          String
+  model            String
+  promptTokens     Int
+  completionTokens Int
+  totalTokens      Int
+  estimatedCostUsd Decimal  @db.Decimal(10, 6)
+  createdAt        DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([feature])
+  @@index([createdAt])
 }

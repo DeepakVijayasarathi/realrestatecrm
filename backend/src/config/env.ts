@@ -22,10 +22,19 @@ export const env = {
     integratedNumber: process.env.MSG91_INTEGRATED_NUMBER || "",
     whatsappUrl: process.env.MSG91_WHATSAPP_URL || "https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/",
   },
+  smartping: {
+    apiKey: process.env.SMARTPING_API_KEY || "",
+    campaignName: process.env.SMARTPING_CAMPAIGN_NAME || "",
+  },
   openai: {
     apiKey: process.env.OPENAI_API_KEY || "",
     model: process.env.OPENAI_MODEL || "gpt-4o-mini",
     apiUrl: process.env.OPENAI_API_URL || "https://api.openai.com/v1/chat/completions",
+    // USD per 1,000,000 tokens — defaults match gpt-4o-mini's public pricing at the time
+    // this was written. Cost tracking is an estimate for budget awareness, not a billing
+    // record; update these if your OpenAI plan/model pricing differs.
+    inputPricePerMillion: Number(process.env.OPENAI_INPUT_PRICE_PER_MILLION || 0.15),
+    outputPricePerMillion: Number(process.env.OPENAI_OUTPUT_PRICE_PER_MILLION || 0.6),
   },
   smtp: {
     host: process.env.SMTP_HOST || "",

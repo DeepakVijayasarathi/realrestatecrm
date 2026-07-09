@@ -226,6 +226,22 @@ export const CheckIcon: IconType = (p) => (
   </Svg>
 );
 
+export const CameraIcon: IconType = (p) => (
+  <Svg {...p}>
+    <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z" />
+    <circle cx="12" cy="13" r="3.5" />
+  </Svg>
+);
+
+export const RefreshCwIcon: IconType = (p) => (
+  <Svg {...p}>
+    <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+    <path d="M21 3v5h-5" />
+    <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+    <path d="M8 16H3v5" />
+  </Svg>
+);
+
 export const MapPinIcon: IconType = (p) => (
   <Svg {...p}>
     <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
@@ -261,5 +277,26 @@ export const ArrowRightLeftIcon: IconType = (p) => (
     <path d="M20 7H4" />
     <path d="m8 21-4-4 4-4" />
     <path d="M4 17h16" />
+  </Svg>
+);
+
+export const DollarSignIcon: IconType = (p) => (
+  <Svg {...p}>
+    <line x1="12" x2="12" y1="2" y2="22" />
+    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+  </Svg>
+);
+
+export const ZapIcon: IconType = (p) => (
+  <Svg {...p}>
+    <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z" />
+  </Svg>
+);
+
+export const BotIcon: IconType = (p) => (
+  <Svg {...p}>
+    <path d="M12 8V4H8" />
+    <rect width="16" height="12" x="4" y="8" rx="2" />
+    <path d="M2 14h2M20 14h2M9 13v2M15 13v2" />
   </Svg>
 );

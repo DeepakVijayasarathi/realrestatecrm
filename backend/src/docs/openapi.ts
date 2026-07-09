@@ -151,6 +151,13 @@ export const openApiSpec = {
       },
     },
 
+    "/ai/sales-pitch": { post: { tags: ["AI"], summary: "Generate a WhatsApp-ready sales pitch for a property (+ optional lead context)", security: bearer, responses: { "200": { description: "Generated text + token usage" } } } },
+    "/ai/investment-proposal": { post: { tags: ["AI"], summary: "Generate a one-page investment proposal for a property", security: bearer, responses: { "200": { description: "Generated text + token usage" } } } },
+    "/ai/price-predictor": { post: { tags: ["AI"], summary: "Estimate a price range grounded on comparable inventory listings", security: bearer, responses: { "200": { description: "Generated text + token usage" } } } },
+    "/ai/agreement-draft": { post: { tags: ["AI"], summary: "Draft a preliminary Agreement to Sell for a property + lead", security: bearer, responses: { "200": { description: "Generated text + token usage" } } } },
+    "/ai/ask": { post: { tags: ["AI"], summary: "Free-form Q&A against the same AI assistant", security: bearer, responses: { "200": { description: "Generated text + token usage" } } } },
+    "/ai/usage": { get: { tags: ["AI"], summary: "OpenAI cost & token usage — totals, by feature, by staff member, recent log (Super Admin/Sales Manager only)", security: bearer, responses: { "200": { description: "OK" } } } },
+
     "/partners": crud("Partners", "partner company"),
     "/partners/{id}": {
       get: { tags: ["Partners"], summary: "Partner detail", security: bearer, parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }], responses: { "200": { description: "OK" } } },

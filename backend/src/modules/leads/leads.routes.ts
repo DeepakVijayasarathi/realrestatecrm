@@ -364,10 +364,20 @@ router.get("/board", async (req, res, next) => {
   }
 });
 
+/** Shared guard for anywhere a lead's assignedToId is set directly (creation, CSV import,
+ * the dedicated /assign route): must be an active member of the sales team. */
+async function assertAssignable(userId: string) {
+  const staff = await prisma.user.findUnique({ where: { id: userId } });
+  if (!staff || !staff.isActive) throw badRequest("Selected staff member is not available");
+  if (!salesTeam.includes(staff.role)) throw badRequest("Leads can only be assigned to sales staff");
+  return staff;
+}
+
 // ── Create ───────────────────────────────────────────────────────────
 router.post("/", requireRole(...salesTeam), validate(createLeadSchema), async (req, res, next) => {
   try {
     const { email, ...rest } = req.body;
+    if (rest.assignedToId) await assertAssignable(rest.assignedToId);
     const lead = await prisma.lead.create({
       data: { ...rest, email: email || null, createdById: req.user!.id },
       include: leadInclude,
@@ -539,7 +549,10 @@ router.put("/:id", validate(updateLeadSchema), async (req, res, next) => {
   try {
     const existing = await getLeadScoped(req.params.id, req.user!);
     if (req.user!.role === Role.PARTNER_USER) throw forbidden("Partners cannot edit lead details");
-    const { email, status, ...rest } = req.body;
+    // Reassignment must go through POST /:id/assign — it validates the target is an
+    // active sales-team member, notifies them, and logs the change. Silently accepting
+    // assignedToId here would bypass all of that.
+    const { email, status, assignedToId: _ignoredAssignedToId, ...rest } = req.body;
     const data: Prisma.LeadUpdateInput = { ...rest };
     if (email !== undefined) data.email = email || null;
     if (status && status !== existing.status) {
@@ -574,9 +587,7 @@ router.post("/:id/assign", requireRole(...salesTeam), validate(assignSchema), as
       const existing = await getLeadScoped(req.params.id, req.user!);
       if (existing.assignedToId !== req.user!.id) throw forbidden("You can only transfer leads currently assigned to you");
     }
-    const staff = await prisma.user.findUnique({ where: { id: req.body.assignedToId } });
-    if (!staff || !staff.isActive) throw badRequest("Selected staff member is not available");
-    if (!salesTeam.includes(staff.role)) throw badRequest("Leads can only be assigned to sales staff");
+    const staff = await assertAssignable(req.body.assignedToId);
     const lead = await prisma.lead.update({
       where: { id: req.params.id },
       data: { assignedToId: staff.id },
@@ -747,7 +758,7 @@ router.post("/:id/send-whatsapp", validate(sendWhatsAppSchema), async (req, res,
       throw badRequest("Provide propertyIds, a templateKey, or a customMessage");
     }
 
-    const result = await whatsappProvider.sendText(toNumber, body);
+    const result = await whatsappProvider.sendText(toNumber, body, lead.fullName);
 
     const log = await prisma.whatsAppLog.create({
       data: {
@@ -880,7 +891,7 @@ router.post("/:id/share-partner", validate(sharePartnerSchema), async (req, res,
           );
         }
       }
-      const waResult = await whatsappProvider.sendText(partnerNumber, lines.join("\n"));
+      const waResult = await whatsappProvider.sendText(partnerNumber, lines.join("\n"), partner.name);
       await prisma.whatsAppLog.create({
         data: {
           leadId: lead.id,

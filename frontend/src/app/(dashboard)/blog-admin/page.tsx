@@ -74,7 +74,7 @@ export default function BlogAdminPage() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">{p.title}</span>
-                  <Badge value={p.isPublished ? "ACTIVE" : "INACTIVE"} className={p.isPublished ? "" : ""} />
+                  <Badge value={p.isPublished ? "ACTIVE" : "INACTIVE"} />
                 </div>
                 <p className="text-xs text-slate-400">/blog/{p.slug} · {fmtDate(p.createdAt)}</p>
               </div>

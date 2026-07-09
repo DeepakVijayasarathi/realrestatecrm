@@ -14,6 +14,14 @@ import { maskPhone } from "../../lib/mask";
 const router = Router();
 router.use(requireAuth);
 
+/** Property staff have no legitimate reason to see lead/partner-share data — this
+ * app's only other lead-touching roles are sales staff, so gate on those explicitly
+ * rather than the inverse "not a partner user" check, which let PROPERTY_STAFF (and
+ * any future non-sales role) through too. */
+function isSalesStaff(role: Role) {
+  return role === Role.SALES_MANAGER || role === Role.SALES_EXECUTIVE || role === Role.SUPER_ADMIN;
+}
+
 const partnerSchema = z.object({
   name: z.string().min(2),
   contactPerson: z.string().optional().nullable(),
@@ -89,6 +97,9 @@ router.get("/:id/leads", async (req, res, next) => {
     if (req.user!.role === Role.PARTNER_USER && req.user!.partnerCompanyId !== req.params.id) {
       throw forbidden();
     }
+    if (req.user!.role !== Role.PARTNER_USER && !isSalesStaff(req.user!.role)) {
+      throw forbidden();
+    }
     const shares = await prisma.partnerLeadShare.findMany({
       where: { partnerId: req.params.id },
       include: {
@@ -129,7 +140,7 @@ router.post("/shares/:shareId/reveal-phone", async (req, res, next) => {
     if (!share) throw notFound("Shared lead");
     const user = req.user!;
     const isPartnerOwner = user.role === Role.PARTNER_USER && user.partnerCompanyId === share.partnerId;
-    if (!isPartnerOwner && user.role === Role.PARTNER_USER) throw forbidden();
+    if (!isPartnerOwner && !isSalesStaff(user.role)) throw forbidden();
     await audit(user.id, "partner_revealed_phone", "partner_lead_share", share.id, { leadName: share.lead.fullName });
     res.json({ data: { mobile: share.lead.mobile, whatsappNumber: share.lead.whatsappNumber } });
   } catch (err) {
@@ -153,7 +164,7 @@ router.put("/shares/:shareId", validate(shareStatusSchema), async (req, res, nex
     if (!share) throw notFound("Shared lead");
     const user = req.user!;
     const isPartnerOwner = user.role === Role.PARTNER_USER && user.partnerCompanyId === share.partnerId;
-    const isInternal = user.role !== Role.PARTNER_USER;
+    const isInternal = isSalesStaff(user.role);
     if (!isPartnerOwner && !isInternal) throw forbidden();
 
     const updated = await prisma.partnerLeadShare.update({

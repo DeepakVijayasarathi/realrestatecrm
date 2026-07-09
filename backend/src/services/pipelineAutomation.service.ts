@@ -36,7 +36,7 @@ export async function runStageAutomation(lead: Lead, toStage: PipelineStage, age
       time: scheduledTime,
     });
 
-    const result = await whatsappProvider.sendText(toNumber, body);
+    const result = await whatsappProvider.sendText(toNumber, body, lead.fullName);
     await prisma.whatsAppLog.create({
       data: {
         leadId: lead.id,

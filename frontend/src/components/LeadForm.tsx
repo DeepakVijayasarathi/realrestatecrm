@@ -126,13 +126,20 @@ export default function LeadForm({ initial, onSaved, onCancel }: Props) {
             {PRIORITIES.map((p) => <option key={p} value={p}>{labelize(p)}</option>)}
           </Select>
         </Field>
-        <Field label="Assign to">
-          <Select value={form.assignedToId ?? ""} onChange={(e) => set("assignedToId", e.target.value)}>
-            <option value="">Unassigned</option>
-            {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </Select>
-        </Field>
+        {!isEdit && (
+          <Field label="Assign to">
+            <Select value={form.assignedToId ?? ""} onChange={(e) => set("assignedToId", e.target.value)}>
+              <option value="">Unassigned</option>
+              {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </Select>
+          </Field>
+        )}
       </div>
+      {isEdit && (
+        <p className="text-xs text-slate-500">
+          To reassign or transfer this lead, use the assign/transfer dropdown on the lead's detail page.
+        </p>
+      )}
       <Field label="Requirement notes">
         <Textarea rows={3} value={form.requirementNotes ?? ""} onChange={(e) => set("requirementNotes", e.target.value)} />
       </Field>

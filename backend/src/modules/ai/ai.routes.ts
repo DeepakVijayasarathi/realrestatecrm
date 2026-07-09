@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { z } from "zod";
-import { Role } from "@prisma/client";
+import { Prisma, Role } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
+import { env } from "../../config/env";
 import { badRequest, forbidden, notFound } from "../../lib/errors";
-import { requireAuth } from "../../middleware/auth";
+import { AuthUser, requireAuth, requireRole } from "../../middleware/auth";
 import { validate } from "../../middleware/validate";
 import { askOpenAI } from "../../services/openai.service";
 
@@ -20,8 +21,13 @@ async function getProperty(id: string) {
   return property;
 }
 
-async function getLead(id: string) {
-  const lead = await prisma.lead.findUnique({ where: { id } });
+/** Lead PII (phone, budget, notes) is scoped the same way it is everywhere else in the
+ * app — executives only their own, property staff not at all — so the AI drafting tools
+ * can't be used as a side door around the scoping enforced on /leads/:id. */
+async function getLead(id: string, user: AuthUser) {
+  if (user.role === Role.PROPERTY_STAFF) throw forbidden();
+  const where = user.role === Role.SALES_EXECUTIVE ? { id, assignedToId: user.id } : { id };
+  const lead = await prisma.lead.findFirst({ where });
   if (!lead) throw notFound("Lead");
   return lead;
 }
@@ -56,23 +62,43 @@ const SYSTEM_PROMPT =
   "Write in clear, professional English. Prices are in Indian Rupees (INR) using lakh/crore-friendly phrasing where natural. " +
   "Never invent property or client facts beyond what is given in the context — if information is missing, note that plainly.";
 
+/** Runs the AI call and records token usage + estimated cost against the requesting user,
+ * so the cost-tracking screen reflects every feature from one place instead of five. */
+async function runAi(user: AuthUser, feature: string, prompt: string) {
+  const { text, usage } = await askOpenAI([
+    { role: "system", content: SYSTEM_PROMPT },
+    { role: "user", content: prompt },
+  ]);
+  prisma.aiUsageLog
+    .create({
+      data: {
+        userId: user.id,
+        feature,
+        model: env.openai.model,
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+        totalTokens: usage.totalTokens,
+        estimatedCostUsd: usage.estimatedCostUsd,
+      },
+    })
+    .catch((err) => console.error("[ai] failed to log usage:", err));
+  return { text, usage };
+}
+
 router.post(
   "/sales-pitch",
   validate(z.object({ propertyId: z.string().min(1), leadId: z.string().optional() })),
   async (req, res, next) => {
     try {
       const property = await getProperty(req.body.propertyId);
-      const lead = req.body.leadId ? await getLead(req.body.leadId) : null;
+      const lead = req.body.leadId ? await getLead(req.body.leadId, req.user!) : null;
       const prompt = [
         "Write a short, persuasive WhatsApp-ready sales pitch (120-180 words) for this property.",
         propertyBlock(property),
         lead ? `\nTailor it for this specific client:\n${leadBlock(lead)}` : "\nNo specific client — write a general pitch.",
       ].join("\n\n");
-      const text = await askOpenAI([
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: prompt },
-      ]);
-      res.json({ data: { text } });
+      const { text, usage } = await runAi(req.user!, "sales-pitch", prompt);
+      res.json({ data: { text, usage } });
     } catch (err) {
       next(err);
     }
@@ -91,11 +117,8 @@ router.post(
         "Use short headed sections, not a wall of text.",
         propertyBlock(property),
       ].join("\n\n");
-      const text = await askOpenAI([
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: prompt },
-      ]);
-      res.json({ data: { text } });
+      const { text, usage } = await runAi(req.user!, "investment-proposal", prompt);
+      res.json({ data: { text, usage } });
     } catch (err) {
       next(err);
     }
@@ -134,11 +157,8 @@ router.post(
         compBlock,
         "State the estimated range clearly, list the assumptions/adjustments you made, and flag if the comparable data is too thin to be confident.",
       ].join("\n\n");
-      const text = await askOpenAI([
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: prompt },
-      ]);
-      res.json({ data: { text, comparablesUsed: comparables.length } });
+      const { text, usage } = await runAi(req.user!, "price-predictor", prompt);
+      res.json({ data: { text, usage, comparablesUsed: comparables.length } });
     } catch (err) {
       next(err);
     }
@@ -151,7 +171,7 @@ router.post(
   async (req, res, next) => {
     try {
       const property = await getProperty(req.body.propertyId);
-      const lead = await getLead(req.body.leadId);
+      const lead = await getLead(req.body.leadId, req.user!);
       const prompt = [
         "Draft a preliminary Agreement to Sell / Booking Agreement for an Indian real estate transaction, using the details below.",
         "Include standard sections: parties, property schedule, agreed price, token/advance amount (leave blank if not given), payment schedule (leave placeholders), possession, and a note that this draft must be reviewed by a lawyer before signing.",
@@ -159,11 +179,8 @@ router.post(
         `\nProperty:\n${propertyBlock(property)}`,
         `\nBuyer (client):\n${leadBlock(lead)}\nMobile: ${lead.mobile}`,
       ].join("\n\n");
-      const text = await askOpenAI([
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: prompt },
-      ]);
-      res.json({ data: { text } });
+      const { text, usage } = await runAi(req.user!, "agreement-draft", prompt);
+      res.json({ data: { text, usage } });
     } catch (err) {
       next(err);
     }
@@ -176,15 +193,77 @@ router.post(
   async (req, res, next) => {
     try {
       if (!req.body.query.trim()) throw badRequest("Query is required");
-      const text = await askOpenAI([
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: req.body.query },
-      ]);
-      res.json({ data: { text } });
+      const { text, usage } = await runAi(req.user!, "ask", req.body.query);
+      res.json({ data: { text, usage } });
     } catch (err) {
       next(err);
     }
   }
 );
+
+// ── Cost tracking (managers only — usage cost is a budget metric) ────
+router.get("/usage", requireRole(Role.SALES_MANAGER), async (req, res, next) => {
+  try {
+    const { from, to } = req.query as Record<string, string>;
+    const where: Prisma.AiUsageLogWhereInput =
+      from || to
+        ? { createdAt: { ...(from ? { gte: new Date(from) } : {}), ...(to ? { lte: new Date(to) } : {}) } }
+        : {};
+
+    const [totals, byFeature, byUser, recent] = await Promise.all([
+      prisma.aiUsageLog.aggregate({ where, _sum: { estimatedCostUsd: true, totalTokens: true }, _count: true }),
+      prisma.aiUsageLog.groupBy({ by: ["feature"], where, _sum: { estimatedCostUsd: true, totalTokens: true }, _count: true }),
+      prisma.aiUsageLog.groupBy({ by: ["userId"], where, _sum: { estimatedCostUsd: true, totalTokens: true }, _count: true }),
+      prisma.aiUsageLog.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: 50,
+        include: { user: { select: { name: true } } },
+      }),
+    ]);
+
+    const users = await prisma.user.findMany({
+      where: { id: { in: byUser.map((u) => u.userId) } },
+      select: { id: true, name: true },
+    });
+    const userNames = new Map(users.map((u) => [u.id, u.name]));
+
+    res.json({
+      data: {
+        totalRequests: totals._count,
+        totalCostUsd: Number(totals._sum.estimatedCostUsd ?? 0),
+        totalTokens: totals._sum.totalTokens ?? 0,
+        byFeature: byFeature
+          .map((f) => ({
+            feature: f.feature,
+            requests: f._count,
+            costUsd: Number(f._sum.estimatedCostUsd ?? 0),
+            tokens: f._sum.totalTokens ?? 0,
+          }))
+          .sort((a, b) => b.costUsd - a.costUsd),
+        byStaff: byUser
+          .map((u) => ({
+            userId: u.userId,
+            name: userNames.get(u.userId) ?? "Unknown",
+            requests: u._count,
+            costUsd: Number(u._sum.estimatedCostUsd ?? 0),
+            tokens: u._sum.totalTokens ?? 0,
+          }))
+          .sort((a, b) => b.costUsd - a.costUsd),
+        recent: recent.map((r) => ({
+          id: r.id,
+          feature: r.feature,
+          model: r.model,
+          tokens: r.totalTokens,
+          costUsd: Number(r.estimatedCostUsd),
+          user: r.user.name,
+          createdAt: r.createdAt,
+        })),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 export default router;
