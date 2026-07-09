@@ -113,6 +113,11 @@ class SmartPingProvider implements WhatsAppProvider {
     if (!this.settings.smartpingApiKey || !this.settings.smartpingCampaignName) {
       return { status: MessageStatus.FAILED, error: "SmartPing is not configured — set its API key and campaign name in Settings → Integrations" };
     }
+    // This runs on AiSensy's campaign API under the hood (per the apiKey's JWT payload) —
+    // a verified-working request against it used a bare local number (no "+", no country
+    // code) and included every optional field as an explicit empty default; omitting them
+    // got misreported back as "Campaign does not exist" rather than a schema error.
+    const destination = toNumber.replace(/\D/g, "").replace(/^91(?=\d{10}$)/, "");
     try {
       const res = await fetch("https://backend.api-wa.co/campaign/smartpingbsp/api/v2", {
         method: "POST",
@@ -120,10 +125,15 @@ class SmartPingProvider implements WhatsAppProvider {
         body: JSON.stringify({
           apiKey: this.settings.smartpingApiKey,
           campaignName: this.settings.smartpingCampaignName,
-          destination: toNumber,
+          destination,
           userName: contactName || "Customer",
           source: "RealRest CRM",
           templateParams: [body],
+          media: {},
+          buttons: [],
+          carouselCards: [],
+          location: {},
+          attributes: {},
         }),
       });
       const raw = await res.text();
