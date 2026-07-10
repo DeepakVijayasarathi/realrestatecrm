@@ -12,6 +12,7 @@ import {
   BriefcaseIcon,
   BuildingIcon,
   CalendarIcon,
+  FileTextIcon,
   KanbanIcon,
   LayoutDashboardIcon,
   LogOutIcon,
@@ -63,6 +64,7 @@ const NAV_SECTIONS = [
     items: [
       { href: "/blog-admin", label: "Blog", icon: NewspaperIcon, roles: ["SALES_MANAGER"] },
       { href: "/users", label: "Users", icon: UserIcon, roles: [] },
+      { href: "/audit-log", label: "Audit Log", icon: FileTextIcon, roles: [] },
       { href: "/settings", label: "Settings", icon: SettingsIcon, roles: ["SALES_MANAGER"] },
     ],
   },

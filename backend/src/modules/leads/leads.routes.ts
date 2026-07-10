@@ -353,18 +353,35 @@ router.get("/", async (req, res, next) => {
   }
 });
 
-// Kanban board: leads grouped by stage
+// Kanban board: leads grouped by stage. Capped per-stage (rather than one shared cap
+// across every stage combined) so a high-churn stage like NEW_LEAD can't crowd rarely-
+// touched stages like REGISTRATION out of the board entirely once total leads grow past
+// the cap. Each column also gets its true total so the UI can show when it's truncated.
 router.get("/board", async (req, res, next) => {
   try {
-    const leads = await prisma.lead.findMany({
-      where: scopeFor(req.user!),
-      include: leadInclude,
-      orderBy: { updatedAt: "desc" },
-      take: 500,
+    const where = scopeFor(req.user!);
+    const stages = Object.values(PipelineStage);
+    const [counts, leadsByStage] = await Promise.all([
+      prisma.lead.groupBy({ by: ["stage"], where, _count: { _all: true } }),
+      Promise.all(
+        stages.map((stage) =>
+          prisma.lead.findMany({
+            where: { ...where, stage },
+            include: leadInclude,
+            orderBy: { updatedAt: "desc" },
+            take: 200,
+          })
+        )
+      ),
+    ]);
+    const countByStage = Object.fromEntries(counts.map((c) => [c.stage, c._count._all]));
+    const board: Record<string, { leads: unknown[]; total: number }> = {};
+    stages.forEach((stage, i) => {
+      board[stage] = {
+        leads: leadsByStage[i].map((l) => maskForPartner(l, req.user!)),
+        total: countByStage[stage] ?? 0,
+      };
     });
-    const board: Record<string, typeof leads> = {};
-    for (const stage of Object.values(PipelineStage)) board[stage] = [];
-    for (const lead of leads) board[lead.stage].push(maskForPartner(lead, req.user!));
     res.json({ data: board });
   } catch (err) {
     next(err);

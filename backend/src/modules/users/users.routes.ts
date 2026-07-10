@@ -6,7 +6,7 @@ import { prisma } from "../../lib/prisma";
 import { requireAuth, requireRole } from "../../middleware/auth";
 import { validate } from "../../middleware/validate";
 import { audit } from "../../services/audit.service";
-import { notFound } from "../../lib/errors";
+import { badRequest, notFound } from "../../lib/errors";
 
 const router = Router();
 router.use(requireAuth);
@@ -48,7 +48,7 @@ router.get("/", async (req, res, next) => {
   }
 });
 
-const createUserSchema = z.object({
+const baseUserSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(8),
@@ -56,6 +56,14 @@ const createUserSchema = z.object({
   phone: z.string().optional(),
   partnerCompanyId: z.string().optional().nullable(),
 });
+
+// A partner user with no partnerCompanyId matches no partner's leads/shares — they'd
+// log in successfully into an account that silently shows nothing, with no error
+// anywhere to explain why. Only the frontend form enforced this; enforce it here too.
+const createUserSchema = baseUserSchema.refine(
+  (data) => data.role !== Role.PARTNER_USER || !!data.partnerCompanyId,
+  { message: "partnerCompanyId is required when role is PARTNER_USER", path: ["partnerCompanyId"] }
+);
 
 router.post("/", requireRole(), validate(createUserSchema), async (req, res, next) => {
   try {
@@ -71,10 +79,17 @@ router.post("/", requireRole(), validate(createUserSchema), async (req, res, nex
   }
 });
 
-const updateUserSchema = createUserSchema.partial().extend({ isActive: z.boolean().optional() });
+const updateUserSchema = baseUserSchema.partial().extend({ isActive: z.boolean().optional() });
 
 router.put("/:id", requireRole(), validate(updateUserSchema), async (req, res, next) => {
   try {
+    const existing = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!existing) throw notFound("User not found");
+    const resultingRole = req.body.role ?? existing.role;
+    const resultingPartnerCompanyId = req.body.partnerCompanyId !== undefined ? req.body.partnerCompanyId : existing.partnerCompanyId;
+    if (resultingRole === Role.PARTNER_USER && !resultingPartnerCompanyId) {
+      throw badRequest("partnerCompanyId is required when role is PARTNER_USER");
+    }
     const { password, ...rest } = req.body;
     const data: Record<string, unknown> = { ...rest };
     if (rest.email) data.email = rest.email.toLowerCase();

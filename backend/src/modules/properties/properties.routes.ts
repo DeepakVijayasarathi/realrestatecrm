@@ -209,9 +209,14 @@ router.put("/:id", requireRole(...propertyEditors), validate(propertySchema.part
 
 router.delete("/:id", requireRole(...propertyEditors), async (req, res, next) => {
   try {
+    const existing = await prisma.property.findUnique({ where: { id: req.params.id }, include: { images: true } });
+    if (!existing) throw notFound("Property");
     const property = await prisma.property.delete({ where: { id: req.params.id } });
     await audit(req.user!.id, "property_deleted", "property", req.params.id);
     pushPropertyToWebsite(property, "deleted");
+    // The DB rows cascade-delete, but the uploaded files themselves don't clean up on their own.
+    existing.images.forEach((img) => deleteLocalUpload(img.url));
+    deleteLocalUpload(existing.videoUrl);
     res.json({ message: "Property deleted" });
   } catch (err) {
     next(err);
@@ -254,7 +259,8 @@ router.post(
 
 router.delete("/:id/images/:imageId", requireRole(...propertyEditors), async (req, res, next) => {
   try {
-    await prisma.propertyImage.delete({ where: { id: req.params.imageId } });
+    const image = await prisma.propertyImage.delete({ where: { id: req.params.imageId } });
+    deleteLocalUpload(image.url);
     res.json({ message: "Image removed" });
   } catch (err) {
     next(err);

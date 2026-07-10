@@ -7,7 +7,7 @@ import { Badge, ErrorBanner, PageHeader, Spinner } from "@/components/ui";
 import { KanbanIcon } from "@/components/icons";
 import { Lead, PIPELINE_STAGES, PipelineStage, fmtMoney, labelize } from "@/lib/types";
 
-type Board = Record<string, Lead[]>;
+type Board = Record<string, { leads: Lead[]; total: number }>;
 
 const STAGE_COLORS: Record<string, string> = {
   NEW_LEAD: "border-t-blue-400",
@@ -41,9 +41,17 @@ export default function PipelinePage() {
     if (!board) return;
     // Optimistic move
     const prev = board;
-    const next: Board = Object.fromEntries(Object.entries(board).map(([stage, leads]) => [stage, leads.filter((l) => l.id !== leadId)]));
-    const lead = Object.values(prev).flat().find((l) => l.id === leadId);
-    if (lead) next[toStage] = [{ ...lead, stage: toStage }, ...(next[toStage] ?? [])];
+    const next: Board = Object.fromEntries(
+      Object.entries(board).map(([stage, col]) => {
+        const hadIt = col.leads.some((l) => l.id === leadId);
+        return [stage, { leads: col.leads.filter((l) => l.id !== leadId), total: hadIt ? col.total - 1 : col.total }];
+      })
+    );
+    const lead = Object.values(prev).flatMap((col) => col.leads).find((l) => l.id === leadId);
+    if (lead) {
+      const target = next[toStage] ?? { leads: [], total: 0 };
+      next[toStage] = { leads: [{ ...lead, stage: toStage }, ...target.leads], total: target.total + 1 };
+    }
     setBoard(next);
     try {
       await api.post(`/leads/${leadId}/change-stage`, { stage: toStage });
@@ -66,7 +74,7 @@ export default function PipelinePage() {
       <ErrorBanner message={error} />
       <div className="flex gap-3 overflow-x-auto pb-4">
         {PIPELINE_STAGES.map((stage) => {
-          const leads = board[stage] ?? [];
+          const { leads, total } = board[stage] ?? { leads: [], total: 0 };
           return (
             <div
               key={stage}
@@ -82,8 +90,11 @@ export default function PipelinePage() {
             >
               <div className="flex items-center justify-between px-3 py-2.5">
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">{labelize(stage)}</span>
-                <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-600">{leads.length}</span>
+                <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-600">{total}</span>
               </div>
+              {total > leads.length && (
+                <p className="px-3 pb-1.5 text-[11px] text-amber-600">Showing newest {leads.length} of {total} — see the Leads list to find the rest.</p>
+              )}
               <div className="max-h-[70vh] space-y-2 overflow-y-auto px-2 pb-2">
                 {leads.map((lead) => (
                   <div

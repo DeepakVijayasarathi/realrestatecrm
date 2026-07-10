@@ -50,17 +50,27 @@ router.post(
       });
 
       if (images.length) {
+        // Treat the incoming list as authoritative: add anything new, and drop CRM
+        // rows for images the website no longer lists (otherwise photos removed on
+        // the source site accumulate here forever across repeat syncs). Only done
+        // when the payload actually includes images — an omitted field shouldn't be
+        // read as "this property now has zero photos".
         const existing = await prisma.propertyImage.findMany({ where: { propertyId: property.id } });
+        const incomingUrls = new Set(images);
         const existingUrls = new Set(existing.map((i) => i.url));
-        const startOrder = existing.length;
         const newUrls = images.filter((url) => !existingUrls.has(url));
+        const stale = existing.filter((i) => !incomingUrls.has(i.url));
+        if (stale.length) {
+          await prisma.propertyImage.deleteMany({ where: { id: { in: stale.map((i) => i.id) } } });
+        }
+        const remainingCount = existing.length - stale.length;
         if (newUrls.length) {
           await prisma.propertyImage.createMany({
             data: newUrls.map((url, i) => ({
               propertyId: property.id,
               url,
-              isPrimary: existing.length === 0 && i === 0,
-              sortOrder: startOrder + i,
+              isPrimary: remainingCount === 0 && i === 0,
+              sortOrder: remainingCount + i,
             })),
           });
         }

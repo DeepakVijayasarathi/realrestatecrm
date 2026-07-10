@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { Prisma, Role } from "@prisma/client";
+import { Prisma, PropertyType, Role } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { badRequest, forbidden, notFound } from "../../lib/errors";
 import { AuthUser, requireAuth, requireRole } from "../../middleware/auth";
@@ -129,7 +129,7 @@ router.post(
   validate(
     z.object({
       location: z.string().min(1),
-      propertyType: z.string().min(1),
+      propertyType: z.nativeEnum(PropertyType),
       bedrooms: z.coerce.number().optional(),
       areaSqft: z.coerce.number().optional(),
     })
