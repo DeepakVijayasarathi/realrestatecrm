@@ -25,6 +25,10 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
   const [videoUrl, setVideoUrl] = useState(initial?.videoUrl ?? null);
   const [videoBusy, setVideoBusy] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  // Before the property exists there's no id to upload against yet, so photos/video
+  // taken on the create form are staged locally and uploaded right after creation.
+  const [pendingImages, setPendingImages] = useState<{ file: File; previewUrl: string }[]>([]);
+  const [pendingVideo, setPendingVideo] = useState<{ file: File; previewUrl: string } | null>(null);
   const [form, setForm] = useState({
     title: initial?.title ?? "",
     type: initial?.type ?? "APARTMENT",
@@ -91,8 +95,31 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
       const res = isEdit
         ? await api.put<{ data: Property }>(`/properties/${initial!.id}`, payload)
         : await api.post<{ data: Property }>("/properties", payload);
-      if (onSaved) onSaved(res.data);
-      else router.push(`/properties/${res.data.id}`);
+      let saved = res.data;
+      if (!isEdit && (pendingImages.length > 0 || pendingVideo)) {
+        if (pendingImages.length > 0) {
+          const fd = new FormData();
+          for (const { file } of pendingImages) fd.append("images", file);
+          try {
+            const imgRes = await api.post<{ data: Property["images"] }>(`/properties/${saved.id}/images`, fd);
+            saved = { ...saved, images: imgRes.data };
+          } catch (err) {
+            setError(err instanceof Error ? `Property created, but photo upload failed: ${err.message}` : "Property created, but photo upload failed");
+          }
+        }
+        if (pendingVideo) {
+          const fd = new FormData();
+          fd.append("video", pendingVideo.file);
+          try {
+            const vidRes = await api.post<{ data: { videoUrl: string } }>(`/properties/${saved.id}/video`, fd);
+            saved = { ...saved, videoUrl: vidRes.data.videoUrl };
+          } catch (err) {
+            setError(err instanceof Error ? `Property created, but video upload failed: ${err.message}` : "Property created, but video upload failed");
+          }
+        }
+      }
+      if (onSaved) onSaved(saved);
+      else router.push(`/properties/${saved.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
       setBusy(false);
@@ -100,15 +127,26 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
   }
 
   async function uploadImages(files: FileList | File[]) {
-    if (!initial) return;
+    const list = Array.from(files);
+    if (!initial) {
+      setPendingImages((imgs) => [...imgs, ...list.map((file) => ({ file, previewUrl: URL.createObjectURL(file) }))]);
+      return;
+    }
     const fd = new FormData();
-    for (const f of Array.from(files)) fd.append("images", f);
+    for (const f of list) fd.append("images", f);
     try {
       const res = await api.post<{ data: { id: string; url: string; isPrimary: boolean }[] }>(`/properties/${initial.id}/images`, fd);
       setImages((imgs) => [...imgs, ...res.data]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     }
+  }
+
+  function removePendingImage(index: number) {
+    setPendingImages((imgs) => {
+      URL.revokeObjectURL(imgs[index].previewUrl);
+      return imgs.filter((_, i) => i !== index);
+    });
   }
 
   async function removeImage(imageId: string) {
@@ -118,7 +156,11 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
   }
 
   async function uploadVideo(file: File) {
-    if (!initial) return;
+    if (!initial) {
+      if (pendingVideo) URL.revokeObjectURL(pendingVideo.previewUrl);
+      setPendingVideo({ file, previewUrl: URL.createObjectURL(file) });
+      return;
+    }
     setVideoBusy(true);
     setError(null);
     const fd = new FormData();
@@ -131,6 +173,11 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
     } finally {
       setVideoBusy(false);
     }
+  }
+
+  function removePendingVideo() {
+    if (pendingVideo) URL.revokeObjectURL(pendingVideo.previewUrl);
+    setPendingVideo(null);
   }
 
   async function removeVideo() {
@@ -251,49 +298,53 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
         )}
       </div>
 
-      {isEdit && (
-        <div>
-          <span className="mb-2 block text-xs font-medium text-slate-600">Images</span>
-          <div className="flex flex-wrap gap-3">
-            {images.map((img) => (
-              <div key={img.id} className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={resolveMediaUrl(img.url)} alt="" className="h-24 w-32 rounded-lg object-cover" />
-                <button
-                  type="button"
-                  onClick={() => removeImage(img.id)}
-                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white"
-                >
-                  <XIcon className="h-3 w-3" />
-                </button>
-              </div>
-            ))}
-            <label className="flex h-24 w-32 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 text-xs text-slate-500 hover:border-brand-400">
-              <UploadIcon className="h-4 w-4" /> Upload
-              <input type="file" multiple accept="image/*" className="hidden" onChange={(e) => e.target.files && uploadImages(e.target.files)} />
-            </label>
-            <button
-              type="button"
-              onClick={() => setShowCamera(true)}
-              className="flex h-24 w-32 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 text-xs text-slate-500 hover:border-brand-400"
-            >
-              <CameraIcon className="h-4 w-4" /> Take photo
-            </button>
-          </div>
-
-          <span className="mb-2 mt-4 block text-xs font-medium text-slate-600">Video tour</span>
-          {videoUrl ? (
-            <div className="relative inline-block">
-              <video src={resolveMediaUrl(videoUrl)} controls className="h-40 rounded-lg bg-slate-900" />
+      <div>
+        <span className="mb-2 block text-xs font-medium text-slate-600">Images</span>
+        <div className="flex flex-wrap gap-3">
+          {(isEdit ? images : pendingImages).map((img, idx) => (
+            <div key={isEdit ? (img as { id: string }).id : idx} className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={isEdit ? resolveMediaUrl((img as { url: string }).url) : (img as { previewUrl: string }).previewUrl}
+                alt=""
+                className="h-24 w-32 rounded-lg object-cover"
+              />
               <button
                 type="button"
-                onClick={removeVideo}
+                onClick={() => (isEdit ? removeImage((img as { id: string }).id) : removePendingImage(idx))}
                 className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white"
               >
                 <XIcon className="h-3 w-3" />
               </button>
             </div>
-          ) : (
+          ))}
+          <label className="flex h-24 w-32 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 text-xs text-slate-500 hover:border-brand-400">
+            <UploadIcon className="h-4 w-4" /> Upload
+            <input type="file" multiple accept="image/*" className="hidden" onChange={(e) => e.target.files && uploadImages(e.target.files)} />
+          </label>
+          <button
+            type="button"
+            onClick={() => setShowCamera(true)}
+            className="flex h-24 w-32 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 text-xs text-slate-500 hover:border-brand-400"
+          >
+            <CameraIcon className="h-4 w-4" /> Take photo
+          </button>
+        </div>
+
+        <span className="mb-2 mt-4 block text-xs font-medium text-slate-600">Video tour</span>
+        {(isEdit ? videoUrl : pendingVideo?.previewUrl) ? (
+          <div className="relative inline-block">
+            <video src={isEdit ? resolveMediaUrl(videoUrl!) : pendingVideo!.previewUrl} controls className="h-40 rounded-lg bg-slate-900" />
+            <button
+              type="button"
+              onClick={isEdit ? removeVideo : removePendingVideo}
+              className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white"
+            >
+              <XIcon className="h-3 w-3" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-3">
             <label className="flex h-24 w-48 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 text-xs text-slate-500 hover:border-brand-400">
               <UploadIcon className="h-4 w-4" /> {videoBusy ? "Uploading…" : "Upload video"}
               <input
@@ -304,10 +355,20 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
                 onChange={(e) => e.target.files?.[0] && uploadVideo(e.target.files[0])}
               />
             </label>
-          )}
-        </div>
-      )}
-      {!isEdit && <p className="text-xs text-slate-500">Save the property first, then upload images and a video tour on the edit page.</p>}
+            <label className="flex h-24 w-48 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 text-xs text-slate-500 hover:border-brand-400">
+              <CameraIcon className="h-4 w-4" /> {videoBusy ? "Uploading…" : "Record video"}
+              <input
+                type="file"
+                accept="video/*"
+                capture="environment"
+                className="hidden"
+                disabled={videoBusy}
+                onChange={(e) => e.target.files?.[0] && uploadVideo(e.target.files[0])}
+              />
+            </label>
+          </div>
+        )}
+      </div>
 
       <div className="flex justify-end gap-2">
         <Button type="button" variant="secondary" onClick={() => router.back()}>Cancel</Button>
