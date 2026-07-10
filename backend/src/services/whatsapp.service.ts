@@ -118,6 +118,11 @@ class SmartPingProvider implements WhatsAppProvider {
     // code) and included every optional field as an explicit empty default; omitting them
     // got misreported back as "Campaign does not exist" rather than a schema error.
     const destination = toNumber.replace(/\D/g, "").replace(/^91(?=\d{10}$)/, "");
+    // WhatsApp template parameters reject newline/tab characters and runs of more than a
+    // few spaces — our rendered messages (property shortlists etc.) are multi-line, so
+    // flatten them into one line for this one param slot without losing the line breaks
+    // visually (a bullet reads fine where the emoji markers already segment each line).
+    const templateParam = body.replace(/[\r\n\t]+/g, " • ").replace(/ {2,}/g, " ").trim();
     try {
       const res = await fetch("https://backend.api-wa.co/campaign/smartpingbsp/api/v2", {
         method: "POST",
@@ -128,7 +133,7 @@ class SmartPingProvider implements WhatsAppProvider {
           destination,
           userName: contactName || "Customer",
           source: "RealRest CRM",
-          templateParams: [body],
+          templateParams: [templateParam],
           media: {},
           buttons: [],
           carouselCards: [],
