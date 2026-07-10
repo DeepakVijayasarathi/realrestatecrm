@@ -14,7 +14,7 @@ interface Props {
 // Letters, spaces, and the handful of punctuation marks real names/places use (O'Brien, St. Anne's).
 const NAME_CHARS = /[^a-zA-Z\s'.-]/g;
 // Digits plus the punctuation a phone number is actually written with.
-const PHONE_CHARS = /[^\d+\s()-]/g;
+const PHONE_CHARS = /[^\d+\s().-]/g;
 
 function sanitizeName(v: string) {
   return v.replace(NAME_CHARS, "");
@@ -62,8 +62,8 @@ export default function LeadForm({ initial, onSaved, onCancel }: Props) {
     const errs: Record<string, string> = {};
     if (!form.fullName.trim()) errs.fullName = "Full name is required";
     if (!form.mobile.trim()) errs.mobile = "Mobile number is required";
-    else if (!/^[\d+\s()-]{7,}$/.test(form.mobile)) errs.mobile = "Enter a valid phone number";
-    if (form.whatsappNumber && !/^[\d+\s()-]{7,}$/.test(form.whatsappNumber)) errs.whatsappNumber = "Enter a valid phone number";
+    else if (!/^[\d+\s().-]{7,}$/.test(form.mobile)) errs.mobile = "Enter a valid phone number";
+    if (form.whatsappNumber && !/^[\d+\s().-]{7,}$/.test(form.whatsappNumber)) errs.whatsappNumber = "Enter a valid phone number";
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
   }

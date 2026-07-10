@@ -10,7 +10,7 @@ import { extractYouTubeId } from "@/lib/youtube";
 import CameraCapture from "@/components/CameraCapture";
 
 // Digits plus the punctuation a phone number is actually written with.
-const PHONE_CHARS = /[^\d+\s()-]/g;
+const PHONE_CHARS = /[^\d+\s().-]/g;
 function sanitizePhone(v: string) {
   return v.replace(PHONE_CHARS, "");
 }
@@ -59,7 +59,7 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
 
   function validate(): boolean {
     const errs: Record<string, string> = {};
-    if (form.contactPhone && !/^[\d+\s()-]{5,}$/.test(form.contactPhone)) errs.contactPhone = "Enter a valid phone number";
+    if (form.contactPhone && !/^[\d+\s().-]{5,}$/.test(form.contactPhone)) errs.contactPhone = "Enter a valid phone number";
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -96,6 +96,7 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
         ? await api.put<{ data: Property }>(`/properties/${initial!.id}`, payload)
         : await api.post<{ data: Property }>("/properties", payload);
       let saved = res.data;
+      let uploadError: string | null = null;
       if (!isEdit && (pendingImages.length > 0 || pendingVideo)) {
         if (pendingImages.length > 0) {
           const fd = new FormData();
@@ -104,7 +105,7 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
             const imgRes = await api.post<{ data: Property["images"] }>(`/properties/${saved.id}/images`, fd);
             saved = { ...saved, images: imgRes.data };
           } catch (err) {
-            setError(err instanceof Error ? `Property created, but photo upload failed: ${err.message}` : "Property created, but photo upload failed");
+            uploadError = `Property created, but photo upload failed: ${err instanceof Error ? err.message : "unknown error"}`;
           }
         }
         if (pendingVideo) {
@@ -114,12 +115,15 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
             const vidRes = await api.post<{ data: { videoUrl: string } }>(`/properties/${saved.id}/video`, fd);
             saved = { ...saved, videoUrl: vidRes.data.videoUrl };
           } catch (err) {
-            setError(err instanceof Error ? `Property created, but video upload failed: ${err.message}` : "Property created, but video upload failed");
+            const msg = `Property created, but video upload failed: ${err instanceof Error ? err.message : "unknown error"}`;
+            uploadError = uploadError ? `${uploadError}. ${msg}` : msg;
           }
         }
       }
       if (onSaved) onSaved(saved);
-      else router.push(`/properties/${saved.id}`);
+      // Carry the failure to the detail page via query param — this component is about
+      // to unmount, so an error banner set here would never be seen.
+      else router.push(`/properties/${saved.id}${uploadError ? `?uploadError=${encodeURIComponent(uploadError)}` : ""}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
       setBusy(false);
@@ -371,7 +375,11 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
       </div>
 
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="secondary" onClick={() => router.back()}>Cancel</Button>
+        <Button type="button" variant="secondary" onClick={() => {
+          pendingImages.forEach((img) => URL.revokeObjectURL(img.previewUrl));
+          if (pendingVideo) URL.revokeObjectURL(pendingVideo.previewUrl);
+          router.back();
+        }}>Cancel</Button>
         <Button type="submit" disabled={busy}>{busy ? "Saving…" : isEdit ? "Save changes" : "Create property"}</Button>
       </div>
 

@@ -330,6 +330,7 @@ model Property {
   @@index([status])
   @@index([location])
   @@index([price])
+  @@index([createdAt])
 }
 
 // Lightweight engagement tracking — one row per property-detail view, used for

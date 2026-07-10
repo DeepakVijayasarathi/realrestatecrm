@@ -27,7 +27,7 @@ const router = Router();
 router.use(requireAuth);
 
 // Digits plus the punctuation a phone number is actually written with.
-const phonePattern = /^[\d+\s()-]{5,}$/;
+const phonePattern = /^[\d+\s().-]{5,}$/;
 
 const propertySchema = z.object({
   title: z.string().min(3),

@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { api, resolveMediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import PropertyForm from "@/components/PropertyForm";
-import { Badge, Button, Card, Spinner } from "@/components/ui";
+import { Badge, Button, Card, ErrorBanner, Spinner } from "@/components/ui";
 import { Property, fmtDate, fmtMoney, labelize } from "@/lib/types";
 import { BuildingIcon, MapPinIcon, VideoIcon } from "@/components/icons";
 import { youtubeEmbedUrl } from "@/lib/youtube";
@@ -18,6 +18,7 @@ function PropertyDetailContent() {
   const canEdit = hasRole("PROPERTY_STAFF", "SALES_MANAGER");
   const [property, setProperty] = useState<Property | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(searchParams.get("uploadError"));
   const [editing, setEditing] = useState(searchParams.get("edit") === "true");
 
   useEffect(() => {
@@ -26,8 +27,12 @@ function PropertyDetailContent() {
 
   async function remove() {
     if (!confirm("Delete this property? This cannot be undone.")) return;
-    await api.del(`/properties/${id}`);
-    router.push("/properties");
+    try {
+      await api.del(`/properties/${id}`);
+      router.push("/properties");
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Delete failed");
+    }
   }
 
   if (error) return <p className="text-sm text-red-600">{error}</p>;
@@ -50,6 +55,7 @@ function PropertyDetailContent() {
 
   return (
     <div className="space-y-4">
+      <ErrorBanner message={actionError} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold">{property.title}</h1>

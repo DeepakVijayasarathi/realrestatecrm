@@ -27,7 +27,7 @@ const emptyForm = { name: "", contactPerson: "", phone: "", whatsapp: "", email:
 // Letters, spaces, and the handful of punctuation marks real names/places use (O'Brien, St. Anne's).
 const NAME_CHARS = /[^a-zA-Z\s'.-]/g;
 // Digits plus the punctuation a phone number is actually written with.
-const PHONE_CHARS = /[^\d+\s()-]/g;
+const PHONE_CHARS = /[^\d+\s().-]/g;
 
 function sanitizeName(v: string) {
   return v.replace(NAME_CHARS, "");
@@ -86,8 +86,8 @@ export default function PartnersPage() {
 
   function validate(): boolean {
     const errs: Record<string, string> = {};
-    if (form.phone && !/^[\d+\s()-]{5,}$/.test(form.phone)) errs.phone = "Enter a valid phone number";
-    if (form.whatsapp && !/^[\d+\s()-]{5,}$/.test(form.whatsapp)) errs.whatsapp = "Enter a valid phone number";
+    if (form.phone && !/^[\d+\s().-]{5,}$/.test(form.phone)) errs.phone = "Enter a valid phone number";
+    if (form.whatsapp && !/^[\d+\s().-]{5,}$/.test(form.whatsapp)) errs.whatsapp = "Enter a valid phone number";
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
   }

@@ -25,7 +25,7 @@ function isSalesStaff(role: Role) {
 // Letters, spaces, and the handful of punctuation marks real names/places use (O'Brien, St. Anne's).
 const namePattern = /^[a-zA-Z\s'.-]+$/;
 // Digits plus the punctuation a phone number is actually written with.
-const phonePattern = /^[\d+\s()-]{5,}$/;
+const phonePattern = /^[\d+\s().-]{5,}$/;
 
 const partnerSchema = z.object({
   name: z.string().min(2),
@@ -48,6 +48,11 @@ router.get("/", async (req, res, next) => {
       where,
       include: { _count: { select: { shares: true, users: true } } },
       orderBy: { name: "asc" },
+      // No pagination UI on this list (it's a compact company picker, not a searchable
+      // table like Leads/Properties) — a high safety cap keeps the query bounded as the
+      // vendor list grows without needing to build pagination for what's usually a
+      // short list.
+      take: 500,
     });
     res.json({ data: partners });
   } catch (err) {

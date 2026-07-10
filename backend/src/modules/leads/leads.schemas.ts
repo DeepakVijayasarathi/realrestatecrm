@@ -4,7 +4,7 @@ import { LeadSource, LeadStatus, PipelineStage, Priority, PropertyType } from "@
 // Letters, spaces, and the handful of punctuation marks real names/places use (O'Brien, St. Anne's).
 const namePattern = /^[a-zA-Z\s'.-]+$/;
 // Digits plus the punctuation a phone number is actually written with.
-const phonePattern = /^[\d+\s()-]{5,}$/;
+const phonePattern = /^[\d+\s().-]{5,}$/;
 
 export const createLeadSchema = z.object({
   fullName: z.string().min(2).regex(namePattern, "Name cannot contain numbers or special characters"),
