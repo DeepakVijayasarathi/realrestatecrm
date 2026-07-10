@@ -138,12 +138,12 @@ class SmartPingProvider implements WhatsAppProvider {
         }),
       });
       const raw = await res.text();
-      let data: { id?: string; messageId?: string; message?: string; error?: string; msg?: string } = {};
+      let data: { id?: string; messageId?: string; submitted_message_id?: string; message?: string; error?: string; msg?: string } = {};
       try { data = JSON.parse(raw); } catch { /* keep raw for the error message */ }
       if (!res.ok) {
         return { status: MessageStatus.FAILED, error: data.message || data.error || data.msg || raw.slice(0, 300) || `HTTP ${res.status}` };
       }
-      return { status: MessageStatus.SENT, providerMessageId: data.id || data.messageId };
+      return { status: MessageStatus.SENT, providerMessageId: data.submitted_message_id || data.id || data.messageId };
     } catch (err) {
       return { status: MessageStatus.FAILED, error: err instanceof Error ? err.message : "Network error" };
     }
