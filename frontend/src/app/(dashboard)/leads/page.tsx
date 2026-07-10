@@ -7,7 +7,7 @@ import { api, downloadFile, qs } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import LeadForm from "@/components/LeadForm";
 import { Badge, Button, Card, EmptyState, ErrorBanner, Input, Modal, PageHeader, Pagination, Select, Spinner } from "@/components/ui";
-import { DownloadIcon, UploadCloudIcon, UsersIcon } from "@/components/icons";
+import { DownloadIcon, EyeIcon, PencilIcon, TrashIcon, UploadCloudIcon, UsersIcon } from "@/components/icons";
 import {
   LEAD_SOURCES, LEAD_STATUSES, Lead, PROPERTY_TYPES, Paginated, User,
   fmtDate, fmtMoney, labelize,
@@ -27,6 +27,7 @@ function LeadsContent() {
   const [followUpDue, setFollowUpDue] = useState(params.get("followUpDue") === "true");
   const [staff, setStaff] = useState<User[]>([]);
   const [showCreate, setShowCreate] = useState(false);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [importResult, setImportResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -81,6 +82,24 @@ function LeadsContent() {
     }
   }
 
+  async function downloadSampleCsv() {
+    try {
+      await downloadFile("/leads/import/sample", "leads-import-sample.csv");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Download failed");
+    }
+  }
+
+  async function deleteLead(lead: Lead) {
+    if (!confirm(`Delete ${lead.fullName}? This cannot be undone.`)) return;
+    try {
+      await api.del(`/leads/${lead.id}`);
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delete failed");
+    }
+  }
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -97,6 +116,7 @@ function LeadsContent() {
               onChange={(e) => e.target.files?.[0] && importCsv(e.target.files[0])}
             />
             <Button variant="secondary" onClick={() => fileRef.current?.click()}><UploadCloudIcon className="mr-1.5 inline h-3.5 w-3.5" />Import CSV</Button>
+            <Button variant="ghost" size="sm" onClick={downloadSampleCsv}><DownloadIcon className="mr-1.5 inline h-3.5 w-3.5" />Sample CSV</Button>
             {hasRole() && <Button variant="secondary" onClick={exportCsv}><DownloadIcon className="mr-1.5 inline h-3.5 w-3.5" />Export CSV</Button>}
             <Button onClick={() => setShowCreate(true)}>+ New lead</Button>
           </>
@@ -158,6 +178,7 @@ function LeadsContent() {
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Assigned</th>
                     <th className="px-4 py-3">Follow-up</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -180,6 +201,25 @@ function LeadsContent() {
                       <td className="px-4 py-3"><Badge value={lead.status} /></td>
                       <td className="px-4 py-3 text-slate-600">{lead.assignedTo?.name ?? "—"}</td>
                       <td className="px-4 py-3 text-slate-600">{fmtDate(lead.followUpAt)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <Link href={`/leads/${lead.id}`} title="View" className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700">
+                            <EyeIcon className="h-4 w-4" />
+                          </Link>
+                          {hasRole("SALES_MANAGER", "SALES_EXECUTIVE") && (
+                            <>
+                              <button title="Edit" className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700" onClick={() => setEditingLead(lead)}>
+                                <PencilIcon className="h-4 w-4" />
+                              </button>
+                              {hasRole("SALES_MANAGER") && (
+                                <button title="Delete" className="rounded-md p-1.5 text-slate-500 hover:bg-red-50 hover:text-red-600" onClick={() => deleteLead(lead)}>
+                                  <TrashIcon className="h-4 w-4" />
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -192,6 +232,12 @@ function LeadsContent() {
 
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New lead" wide>
         <LeadForm onSaved={() => { setShowCreate(false); load(); }} onCancel={() => setShowCreate(false)} />
+      </Modal>
+
+      <Modal open={!!editingLead} onClose={() => setEditingLead(null)} title="Edit lead" wide>
+        {editingLead && (
+          <LeadForm initial={editingLead} onSaved={() => { setEditingLead(null); load(); }} onCancel={() => setEditingLead(null)} />
+        )}
       </Modal>
     </div>
   );

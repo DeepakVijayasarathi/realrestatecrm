@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { api, resolveMediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import PropertyForm from "@/components/PropertyForm";
@@ -10,14 +10,15 @@ import { Property, fmtDate, fmtMoney, labelize } from "@/lib/types";
 import { BuildingIcon, MapPinIcon, VideoIcon } from "@/components/icons";
 import { youtubeEmbedUrl } from "@/lib/youtube";
 
-export default function PropertyDetailPage() {
+function PropertyDetailContent() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { hasRole } = useAuth();
   const canEdit = hasRole("PROPERTY_STAFF", "SALES_MANAGER");
   const [property, setProperty] = useState<Property | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(searchParams.get("edit") === "true");
 
   useEffect(() => {
     api.get<{ data: Property }>(`/properties/${id}`).then((r) => setProperty(r.data)).catch((e) => setError(e.message));
@@ -150,5 +151,13 @@ export default function PropertyDetailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PropertyDetailPage() {
+  return (
+    <Suspense fallback={<Spinner />}>
+      <PropertyDetailContent />
+    </Suspense>
   );
 }

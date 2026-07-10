@@ -11,10 +11,23 @@ interface Props {
   onCancel: () => void;
 }
 
+// Letters, spaces, and the handful of punctuation marks real names/places use (O'Brien, St. Anne's).
+const NAME_CHARS = /[^a-zA-Z\s'.-]/g;
+// Digits plus the punctuation a phone number is actually written with.
+const PHONE_CHARS = /[^\d+\s()-]/g;
+
+function sanitizeName(v: string) {
+  return v.replace(NAME_CHARS, "");
+}
+function sanitizePhone(v: string) {
+  return v.replace(PHONE_CHARS, "");
+}
+
 export default function LeadForm({ initial, onSaved, onCancel }: Props) {
   const isEdit = !!initial?.id;
   const [staff, setStaff] = useState<User[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({
     fullName: initial?.fullName ?? "",
@@ -45,8 +58,19 @@ export default function LeadForm({ initial, onSaved, onCancel }: Props) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  function validate(): boolean {
+    const errs: Record<string, string> = {};
+    if (!form.fullName.trim()) errs.fullName = "Full name is required";
+    if (!form.mobile.trim()) errs.mobile = "Mobile number is required";
+    else if (!/^[\d+\s()-]{7,}$/.test(form.mobile)) errs.mobile = "Enter a valid phone number";
+    if (form.whatsappNumber && !/^[\d+\s()-]{7,}$/.test(form.whatsappNumber)) errs.whatsappNumber = "Enter a valid phone number";
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!validate()) return;
     setBusy(true);
     setError(null);
     const payload = {
@@ -75,23 +99,23 @@ export default function LeadForm({ initial, onSaved, onCancel }: Props) {
     <form onSubmit={submit} className="space-y-4">
       <ErrorBanner message={error} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Field label="Full name *">
-          <Input required value={form.fullName} onChange={(e) => set("fullName", e.target.value)} />
+        <Field label="Full name *" error={fieldErrors.fullName}>
+          <Input required value={form.fullName} onChange={(e) => set("fullName", sanitizeName(e.target.value))} />
         </Field>
-        <Field label="Mobile *">
-          <Input required value={form.mobile} onChange={(e) => set("mobile", e.target.value)} placeholder="+91 9…" />
+        <Field label="Mobile *" error={fieldErrors.mobile}>
+          <Input required type="tel" value={form.mobile} onChange={(e) => set("mobile", sanitizePhone(e.target.value))} placeholder="+91 9…" />
         </Field>
-        <Field label="WhatsApp number">
-          <Input value={form.whatsappNumber ?? ""} onChange={(e) => set("whatsappNumber", e.target.value)} placeholder="defaults to mobile" />
+        <Field label="WhatsApp number" error={fieldErrors.whatsappNumber}>
+          <Input type="tel" value={form.whatsappNumber ?? ""} onChange={(e) => set("whatsappNumber", sanitizePhone(e.target.value))} placeholder="defaults to mobile" />
         </Field>
         <Field label="Email">
           <Input type="email" value={form.email ?? ""} onChange={(e) => set("email", e.target.value)} />
         </Field>
         <Field label="Country">
-          <Input value={form.country ?? ""} onChange={(e) => set("country", e.target.value)} />
+          <Input value={form.country ?? ""} onChange={(e) => set("country", sanitizeName(e.target.value))} />
         </Field>
         <Field label="City">
-          <Input value={form.city ?? ""} onChange={(e) => set("city", e.target.value)} />
+          <Input value={form.city ?? ""} onChange={(e) => set("city", sanitizeName(e.target.value))} />
         </Field>
         <Field label="Preferred area">
           <Input value={form.preferredArea ?? ""} onChange={(e) => set("preferredArea", e.target.value)} />

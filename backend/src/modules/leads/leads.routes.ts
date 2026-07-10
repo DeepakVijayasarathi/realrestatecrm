@@ -450,6 +450,16 @@ router.post("/import", requireRole(...salesTeam), fileUpload.single("file"), asy
   }
 });
 
+// ── Downloadable template matching the /import columns above ─────────────────
+router.get("/import/sample", requireRole(...salesTeam), (_req, res) => {
+  const csv =
+    "fullName,mobile,whatsappNumber,email,country,city,preferredArea,budgetMin,budgetMax,currency,propertyType,bedrooms,visaType\n" +
+    "John Doe,+919876543210,+919876543210,john@example.com,India,Chennai,OMR,5000000,7000000,INR,APARTMENT,3,\n";
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", "attachment; filename=leads-import-sample.csv");
+  res.send(csv);
+});
+
 // ── Bulk offline-campaign import (columns: Name,Phone,Address only) ──────────
 router.post("/import-basic", requireRole(...salesTeam), fileUpload.single("file"), async (req, res, next) => {
   try {
@@ -580,6 +590,17 @@ router.put("/:id", validate(updateLeadSchema), async (req, res, next) => {
       await runStageAutomation(lead, data.stage as PipelineStage, { id: req.user!.id, name: req.user!.name });
     }
     res.json({ data: lead });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete("/:id", requireRole(Role.SALES_MANAGER), async (req, res, next) => {
+  try {
+    await getLeadScoped(req.params.id, req.user!);
+    await prisma.lead.delete({ where: { id: req.params.id } });
+    await audit(req.user!.id, "lead_deleted", "lead", req.params.id);
+    res.json({ message: "Lead deleted" });
   } catch (err) {
     next(err);
   }

@@ -24,6 +24,18 @@ interface Share {
 
 const emptyForm = { name: "", contactPerson: "", phone: "", whatsapp: "", email: "", city: "", country: "", status: "ACTIVE" as const, notes: "" };
 
+// Letters, spaces, and the handful of punctuation marks real names/places use (O'Brien, St. Anne's).
+const NAME_CHARS = /[^a-zA-Z\s'.-]/g;
+// Digits plus the punctuation a phone number is actually written with.
+const PHONE_CHARS = /[^\d+\s()-]/g;
+
+function sanitizeName(v: string) {
+  return v.replace(NAME_CHARS, "");
+}
+function sanitizePhone(v: string) {
+  return v.replace(PHONE_CHARS, "");
+}
+
 export default function PartnersPage() {
   const { user, hasRole } = useAuth();
   const isPartner = user?.role === "PARTNER_USER";
@@ -35,6 +47,7 @@ export default function PartnersPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<PartnerCompany | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [revealed, setRevealed] = useState<Record<string, string>>({});
 
@@ -71,8 +84,17 @@ export default function PartnersPage() {
     setShowForm(true);
   }
 
+  function validate(): boolean {
+    const errs: Record<string, string> = {};
+    if (form.phone && !/^[\d+\s()-]{5,}$/.test(form.phone)) errs.phone = "Enter a valid phone number";
+    if (form.whatsapp && !/^[\d+\s()-]{5,}$/.test(form.whatsapp)) errs.whatsapp = "Enter a valid phone number";
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  }
+
   async function saveForm(e: React.FormEvent) {
     e.preventDefault();
+    if (!validate()) return;
     setBusy(true);
     try {
       if (editing) await api.put(`/partners/${editing.id}`, form);
@@ -211,22 +233,22 @@ export default function PartnersPage() {
               <Input required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
             </Field>
             <Field label="Contact person">
-              <Input value={form.contactPerson} onChange={(e) => setForm((f) => ({ ...f, contactPerson: e.target.value }))} />
+              <Input value={form.contactPerson} onChange={(e) => setForm((f) => ({ ...f, contactPerson: sanitizeName(e.target.value) }))} />
             </Field>
-            <Field label="Phone">
-              <Input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+            <Field label="Phone" error={fieldErrors.phone}>
+              <Input type="tel" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: sanitizePhone(e.target.value) }))} />
             </Field>
-            <Field label="WhatsApp">
-              <Input value={form.whatsapp} onChange={(e) => setForm((f) => ({ ...f, whatsapp: e.target.value }))} />
+            <Field label="WhatsApp" error={fieldErrors.whatsapp}>
+              <Input type="tel" value={form.whatsapp} onChange={(e) => setForm((f) => ({ ...f, whatsapp: sanitizePhone(e.target.value) }))} />
             </Field>
             <Field label="Email">
               <Input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
             </Field>
             <Field label="City">
-              <Input value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} />
+              <Input value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: sanitizeName(e.target.value) }))} />
             </Field>
             <Field label="Country">
-              <Input value={form.country} onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))} />
+              <Input value={form.country} onChange={(e) => setForm((f) => ({ ...f, country: sanitizeName(e.target.value) }))} />
             </Field>
             <Field label="Status">
               <Select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as "ACTIVE" }))}>

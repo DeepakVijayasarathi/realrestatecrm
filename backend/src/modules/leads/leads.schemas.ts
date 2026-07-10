@@ -1,13 +1,18 @@
 import { z } from "zod";
 import { LeadSource, LeadStatus, PipelineStage, Priority, PropertyType } from "@prisma/client";
 
+// Letters, spaces, and the handful of punctuation marks real names/places use (O'Brien, St. Anne's).
+const namePattern = /^[a-zA-Z\s'.-]+$/;
+// Digits plus the punctuation a phone number is actually written with.
+const phonePattern = /^[\d+\s()-]{5,}$/;
+
 export const createLeadSchema = z.object({
-  fullName: z.string().min(2),
-  mobile: z.string().min(5),
-  whatsappNumber: z.string().optional().nullable(),
+  fullName: z.string().min(2).regex(namePattern, "Name cannot contain numbers or special characters"),
+  mobile: z.string().min(5).regex(phonePattern, "Enter a valid phone number"),
+  whatsappNumber: z.string().regex(phonePattern, "Enter a valid phone number").optional().nullable().or(z.literal("")),
   email: z.string().email().optional().nullable().or(z.literal("")),
-  country: z.string().optional().nullable(),
-  city: z.string().optional().nullable(),
+  country: z.string().regex(namePattern, "Country cannot contain numbers").optional().nullable().or(z.literal("")),
+  city: z.string().regex(namePattern, "City cannot contain numbers").optional().nullable().or(z.literal("")),
   preferredArea: z.string().optional().nullable(),
   budgetMin: z.coerce.number().nonnegative().optional().nullable(),
   budgetMax: z.coerce.number().nonnegative().optional().nullable(),

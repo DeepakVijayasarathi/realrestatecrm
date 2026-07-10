@@ -22,14 +22,19 @@ function isSalesStaff(role: Role) {
   return role === Role.SALES_MANAGER || role === Role.SALES_EXECUTIVE || role === Role.SUPER_ADMIN;
 }
 
+// Letters, spaces, and the handful of punctuation marks real names/places use (O'Brien, St. Anne's).
+const namePattern = /^[a-zA-Z\s'.-]+$/;
+// Digits plus the punctuation a phone number is actually written with.
+const phonePattern = /^[\d+\s()-]{5,}$/;
+
 const partnerSchema = z.object({
   name: z.string().min(2),
-  contactPerson: z.string().optional().nullable(),
-  phone: z.string().optional().nullable(),
-  whatsapp: z.string().optional().nullable(),
+  contactPerson: z.string().regex(namePattern, "Contact person cannot contain numbers").optional().nullable().or(z.literal("")),
+  phone: z.string().regex(phonePattern, "Enter a valid phone number").optional().nullable().or(z.literal("")),
+  whatsapp: z.string().regex(phonePattern, "Enter a valid phone number").optional().nullable().or(z.literal("")),
   email: z.string().email().optional().nullable().or(z.literal("")),
-  city: z.string().optional().nullable(),
-  country: z.string().optional().nullable(),
+  city: z.string().regex(namePattern, "City cannot contain numbers").optional().nullable().or(z.literal("")),
+  country: z.string().regex(namePattern, "Country cannot contain numbers").optional().nullable().or(z.literal("")),
   status: z.nativeEnum(PartnerCompanyStatus).default(PartnerCompanyStatus.ACTIVE),
   notes: z.string().optional().nullable(),
 });

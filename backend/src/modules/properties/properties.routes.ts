@@ -26,6 +26,9 @@ import { extractYouTubeId } from "../../lib/youtube";
 const router = Router();
 router.use(requireAuth);
 
+// Digits plus the punctuation a phone number is actually written with.
+const phonePattern = /^[\d+\s()-]{5,}$/;
+
 const propertySchema = z.object({
   title: z.string().min(3),
   type: z.nativeEnum(PropertyType),
@@ -47,7 +50,7 @@ const propertySchema = z.object({
   status: z.nativeEnum(AvailabilityStatus).default(AvailabilityStatus.AVAILABLE),
   ownerName: z.string().optional().nullable(),
   contactName: z.string().optional().nullable(),
-  contactPhone: z.string().optional().nullable(),
+  contactPhone: z.string().regex(phonePattern, "Enter a valid phone number").optional().nullable().or(z.literal("")),
 });
 
 const includeImages = { images: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }] } } satisfies Prisma.PropertyInclude;
@@ -298,6 +301,16 @@ router.delete("/:id/video", requireRole(...propertyEditors), async (req, res, ne
   } catch (err) {
     next(err);
   }
+});
+
+// ── Downloadable template matching the /import columns below ─────────────────
+router.get("/import/sample", requireRole(...propertyEditors), (_req, res) => {
+  const csv =
+    "title,type,category,location,address,areaSqft,bedrooms,bathrooms,furnishing,amenities,price,currency,description,videoUrl,youtubeUrl,latitude,longitude,status,ownerName,contactName,contactPhone\n" +
+    "Sea View Apartment,APARTMENT,SALE,Chennai,\"12 Marina Rd\",1200,3,2,FURNISHED,\"pool|gym\",7000000,INR,\"Spacious 3BHK\",,,13.0827,80.2707,AVAILABLE,Owner Name,Contact Name,+919876543210\n";
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", "attachment; filename=properties-import-sample.csv");
+  res.send(csv);
 });
 
 // ── Bulk CSV import ──────────────────────────────────────────────────

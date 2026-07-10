@@ -41,7 +41,7 @@ function Stat({
 }: { icon: IconType; tone: keyof typeof TONES; label: string; value: string | number; hint?: string; href?: string }) {
   const t = TONES[tone];
   const inner = (
-    <Card className="group relative overflow-hidden p-4 transition hover:-translate-y-0.5 hover:shadow-card-hover">
+    <Card className="group relative flex h-full w-full overflow-hidden p-4 transition hover:-translate-y-0.5 hover:shadow-card-hover">
       <div className="flex items-start gap-3">
         <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${t.bg} ring-1 ring-inset ${t.ring}`}>
           <Icon className={`h-5 w-5 ${t.text}`} />
@@ -49,12 +49,12 @@ function Stat({
         <div className="min-w-0">
           <div className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</div>
           <div className="mt-0.5 truncate text-2xl font-semibold tracking-tight text-slate-800">{value}</div>
-          {hint && <div className="mt-0.5 text-xs text-slate-400">{hint}</div>}
+          <div className="mt-0.5 min-h-[1rem] text-xs text-slate-400">{hint}</div>
         </div>
       </div>
     </Card>
   );
-  return href ? <Link href={href}>{inner}</Link> : inner;
+  return href ? <Link href={href} className="block h-full">{inner}</Link> : <div className="h-full">{inner}</div>;
 }
 
 function BarList({ icon: Icon, title, rows }: { icon: IconType; title: string; rows: { label: string; count: number }[] }) {
@@ -110,7 +110,7 @@ export default function DashboardPage() {
         </h1>
         <p className="text-sm text-slate-500">Here&rsquo;s what&rsquo;s happening across your pipeline today.</p>
       </div>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 items-stretch gap-3 md:grid-cols-4">
         <Stat icon={UsersIcon} tone="blue" label="Total leads" value={data.totalLeads} href="/leads" />
         <Stat icon={SparklesIcon} tone="emerald" label="New today" value={data.newToday} />
         <Stat icon={CalendarIcon} tone="amber" label="Follow-ups due" value={data.followUpsDueToday} hint="today" href="/leads?followUpDue=true" />

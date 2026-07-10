@@ -6,7 +6,7 @@ import { api, downloadFile, qs, resolveMediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Badge, Button, Card, EmptyState, ErrorBanner, Input, PageHeader, Pagination, Select, Spinner } from "@/components/ui";
 import { AVAILABILITY, PROPERTY_CATEGORIES, PROPERTY_TYPES, Paginated, Property, fmtMoney, labelize } from "@/lib/types";
-import { BuildingIcon, DownloadIcon, UploadCloudIcon } from "@/components/icons";
+import { BuildingIcon, DownloadIcon, EyeIcon, PencilIcon, TrashIcon, UploadCloudIcon } from "@/components/icons";
 
 export default function PropertiesPage() {
   const { hasRole } = useAuth();
@@ -59,6 +59,24 @@ export default function PropertiesPage() {
     }
   }
 
+  async function downloadSampleCsv() {
+    try {
+      await downloadFile("/properties/import/sample", "properties-import-sample.csv");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Download failed");
+    }
+  }
+
+  async function deleteProperty(property: Property) {
+    if (!confirm(`Delete "${property.title}"? This cannot be undone.`)) return;
+    try {
+      await api.del(`/properties/${property.id}`);
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delete failed");
+    }
+  }
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -71,6 +89,7 @@ export default function PropertiesPage() {
               <>
                 <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={(e) => e.target.files?.[0] && importCsv(e.target.files[0])} />
                 <Button variant="secondary" onClick={() => fileRef.current?.click()}><UploadCloudIcon className="mr-1.5 inline h-3.5 w-3.5" />Import CSV</Button>
+                <Button variant="ghost" size="sm" onClick={downloadSampleCsv}><DownloadIcon className="mr-1.5 inline h-3.5 w-3.5" />Sample CSV</Button>
               </>
             )}
             {canExport && <Button variant="secondary" onClick={exportCsv}><DownloadIcon className="mr-1.5 inline h-3.5 w-3.5" />Export CSV</Button>}
@@ -116,8 +135,8 @@ export default function PropertiesPage() {
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {result.data.map((p) => (
-              <Link key={p.id} href={`/properties/${p.id}`}>
-                <Card className="overflow-hidden transition hover:shadow-md">
+              <Card key={p.id} className="overflow-hidden transition hover:shadow-md">
+                <Link href={`/properties/${p.id}`}>
                   {p.images[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={resolveMediaUrl(p.images[0].url)} alt={p.title} className="h-40 w-full object-cover" />
@@ -137,8 +156,21 @@ export default function PropertiesPage() {
                       {p.areaSqft && `${p.areaSqft.toLocaleString()} sqft`}
                     </p>
                   </div>
-                </Card>
-              </Link>
+                </Link>
+                {canEdit && (
+                  <div className="flex items-center justify-end gap-1 border-t border-slate-100 px-2 py-1.5">
+                    <Link href={`/properties/${p.id}`} title="View" className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700">
+                      <EyeIcon className="h-4 w-4" />
+                    </Link>
+                    <Link href={`/properties/${p.id}?edit=true`} title="Edit" className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700">
+                      <PencilIcon className="h-4 w-4" />
+                    </Link>
+                    <button title="Delete" className="rounded-md p-1.5 text-slate-500 hover:bg-red-50 hover:text-red-600" onClick={() => deleteProperty(p)}>
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+              </Card>
             ))}
           </div>
           <Card>

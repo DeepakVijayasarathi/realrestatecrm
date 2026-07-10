@@ -9,10 +9,17 @@ import { CameraIcon, MapPinIcon, UploadIcon, XIcon } from "@/components/icons";
 import { extractYouTubeId } from "@/lib/youtube";
 import CameraCapture from "@/components/CameraCapture";
 
+// Digits plus the punctuation a phone number is actually written with.
+const PHONE_CHARS = /[^\d+\s()-]/g;
+function sanitizePhone(v: string) {
+  return v.replace(PHONE_CHARS, "");
+}
+
 export default function PropertyForm({ initial, onSaved }: { initial?: Property; onSaved?: (p: Property) => void }) {
   const isEdit = !!initial;
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [images, setImages] = useState(initial?.images ?? []);
   const [videoUrl, setVideoUrl] = useState(initial?.videoUrl ?? null);
@@ -46,8 +53,16 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  function validate(): boolean {
+    const errs: Record<string, string> = {};
+    if (form.contactPhone && !/^[\d+\s()-]{5,}$/.test(form.contactPhone)) errs.contactPhone = "Enter a valid phone number";
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!validate()) return;
     setBusy(true);
     setError(null);
     const payload = {
@@ -199,8 +214,8 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
         <Field label="Contact name">
           <Input value={form.contactName ?? ""} onChange={(e) => set("contactName", e.target.value)} />
         </Field>
-        <Field label="Contact phone">
-          <Input value={form.contactPhone ?? ""} onChange={(e) => set("contactPhone", e.target.value)} />
+        <Field label="Contact phone" error={fieldErrors.contactPhone}>
+          <Input type="tel" value={form.contactPhone ?? ""} onChange={(e) => set("contactPhone", sanitizePhone(e.target.value))} />
         </Field>
       </div>
       <Field label="Amenities (comma separated)">
