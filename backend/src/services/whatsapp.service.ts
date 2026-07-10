@@ -95,11 +95,18 @@ class Msg91Provider implements WhatsAppProvider {
  *   Name:     realrest_notification
  *   Category: UTILITY
  *   Language: English (en_US)
- *   Body:     *RealRest CRM*<br><br>{{1}}<br><br>_Sent via RealRest CRM_
- * (Meta/WhatsApp templates cannot start or end with a variable — the bolded opener
- * and italic signature line are the minimum static text needed to satisfy that rule
- * while keeping our one rendered message in a single {{1}} slot. Note Meta may
- * auto-reclassify a minimal template like this from Utility to Marketing on review.)
+ *   Body:     *RealRest CRM*
+ *
+ *             {{1}}
+ *
+ *             _Sent via RealRest CRM_
+ * (Type this with real Enter/line-break presses in the template composer — WhatsApp
+ * templates are plain text, not HTML, so a literal "<br>" shows up as those four
+ * characters in the delivered message instead of a line break. Meta/WhatsApp templates
+ * also cannot start or end with a variable — the bolded opener and italic signature
+ * line are the minimum static text needed to satisfy that rule while keeping our one
+ * rendered message in a single {{1}} slot. Note Meta may auto-reclassify a minimal
+ * template like this from Utility to Marketing on review.)
  *
  * Once Meta approves it, create a Live "campaign" in SmartPing pointing at that
  * template — it's that CAMPAIGN's name (not the template name above) that goes in
