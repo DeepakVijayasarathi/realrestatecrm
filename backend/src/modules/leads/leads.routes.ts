@@ -14,7 +14,7 @@ import {
   Role,
 } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
-import { badRequest, forbidden, notFound } from "../../lib/errors";
+import { badRequest, conflict, forbidden, notFound } from "../../lib/errors";
 import { resolveMediaUrl } from "../../lib/media";
 import { maskPhone } from "../../lib/mask";
 import { toCsv } from "../../lib/csv";
@@ -584,7 +584,13 @@ router.put("/:id", validate(updateLeadSchema), async (req, res, next) => {
     // Reassignment must go through POST /:id/assign — it validates the target is an
     // active sales-team member, notifies them, and logs the change. Silently accepting
     // assignedToId here would bypass all of that.
-    const { email, status, assignedToId: _ignoredAssignedToId, ...rest } = req.body;
+    const { email, status, assignedToId: _ignoredAssignedToId, expectedUpdatedAt, ...rest } = req.body;
+    // The edit form sends back every field from whatever it fetched, not just what the
+    // user touched — without this check, a second person saving from a stale snapshot
+    // would silently revert whatever the first person just changed, with no warning.
+    if (expectedUpdatedAt && new Date(expectedUpdatedAt).getTime() !== existing.updatedAt.getTime()) {
+      throw conflict("This lead was updated by someone else since you opened it. Reload to see the latest changes before saving.");
+    }
     const data: Prisma.LeadUpdateInput = { ...rest };
     if (email !== undefined) data.email = email || null;
     if (status && status !== existing.status) {
@@ -646,16 +652,27 @@ router.delete("/:id", requireRole(Role.SALES_MANAGER), async (req, res, next) =>
 // they currently hold to a peer (or back to a manager) — but not touch a colleague's lead.
 router.post("/:id/assign", requireRole(...salesTeam), validate(assignSchema), async (req, res, next) => {
   try {
+    const existing = await getLeadScoped(req.params.id, req.user!);
     if (req.user!.role === Role.SALES_EXECUTIVE) {
-      const existing = await getLeadScoped(req.params.id, req.user!);
       if (existing.assignedToId !== req.user!.id) throw forbidden("You can only transfer leads currently assigned to you");
     }
     const staff = await assertAssignable(req.body.assignedToId);
-    const lead = await prisma.lead.update({
-      where: { id: req.params.id },
-      data: { assignedToId: staff.id },
-      include: leadInclude,
-    });
+    // Two managers assigning the same lead within moments of each other would otherwise
+    // both get a 200 and both notify their pick, with only one silently winning in the
+    // DB — guard with the assignee the client actually saw, when it sent one.
+    const { expectedAssignedToId } = req.body as { expectedAssignedToId?: string | null };
+    if (expectedAssignedToId !== undefined) {
+      const result = await prisma.lead.updateMany({
+        where: { id: req.params.id, assignedToId: expectedAssignedToId },
+        data: { assignedToId: staff.id },
+      });
+      if (result.count === 0) {
+        throw conflict("This lead was just assigned by someone else. Reload to see who has it before reassigning.");
+      }
+    } else {
+      await prisma.lead.update({ where: { id: req.params.id }, data: { assignedToId: staff.id } });
+    }
+    const lead = await prisma.lead.findUniqueOrThrow({ where: { id: req.params.id }, include: leadInclude });
     await logActivity(lead.id, req.user!.id, ActivityType.ASSIGNED,
       req.user!.id === staff.id ? `Assigned to ${staff.name}` : `Transferred to ${staff.name} by ${req.user!.name}`);
     await notify({

@@ -37,6 +37,13 @@ export default function PipelinePage() {
 
   useEffect(load, [load]);
 
+  // The board never refreshed on its own — a stage change made by one manager stayed
+  // invisible to another manager who already had the board open, until a manual reload.
+  useEffect(() => {
+    const t = setInterval(load, 20_000);
+    return () => clearInterval(t);
+  }, [load]);
+
   async function moveLead(leadId: string, toStage: PipelineStage) {
     if (!board) return;
     // Optimistic move

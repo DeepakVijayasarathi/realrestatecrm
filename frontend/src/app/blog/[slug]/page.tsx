@@ -1,23 +1,44 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { api } from "@/lib/api";
-import { Spinner } from "@/components/ui";
+import { Metadata } from "next";
 import { BlogPost, fmtDate } from "@/lib/types";
 import BlogLeadForm from "@/components/BlogLeadForm";
 
-export default function BlogPostPage() {
-  const { slug } = useParams<{ slug: string }>();
-  const [post, setPost] = useState<BlogPost | null>(null);
-  const [error, setError] = useState<string | null>(null);
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 
-  useEffect(() => {
-    api.get<{ data: BlogPost }>(`/blog/${slug}`).then((r) => setPost(r.data)).catch((e) => setError(e.message));
-  }, [slug]);
+async function getPost(slug: string): Promise<BlogPost | null> {
+  try {
+    const res = await fetch(`${API_URL}/blog/${slug}`, { next: { revalidate: 300 } });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { data: BlogPost };
+    return json.data;
+  } catch {
+    return null;
+  }
+}
 
-  if (error) return <p className="text-sm text-red-600">{error}</p>;
-  if (!post) return <Spinner />;
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const post = await getPost(params.slug);
+  if (!post) return { title: "Post not found — RealRest" };
+  const description = post.excerpt || post.body.replace(/\s+/g, " ").slice(0, 160);
+  return {
+    title: `${post.title} — RealRest`,
+    description,
+    openGraph: {
+      title: post.title,
+      description,
+      type: "article",
+      images: post.coverImageUrl ? [post.coverImageUrl] : undefined,
+    },
+    twitter: {
+      card: post.coverImageUrl ? "summary_large_image" : "summary",
+      title: post.title,
+      description,
+    },
+  };
+}
+
+export default async function BlogPostPage({ params }: { params: { slug: string } }) {
+  const post = await getPost(params.slug);
+  if (!post) return <p className="text-sm text-red-600">Post not found</p>;
 
   return (
     <div className="grid gap-8 lg:grid-cols-3">

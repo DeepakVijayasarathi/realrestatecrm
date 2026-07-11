@@ -82,6 +82,7 @@ export default function LeadForm({ initial, onSaved, onCancel }: Props) {
       propertyType: form.propertyType || null,
       bedrooms: form.bedrooms ? Number(form.bedrooms) : null,
       assignedToId: form.assignedToId || null,
+      ...(isEdit ? { expectedUpdatedAt: initial!.updatedAt } : {}),
     };
     try {
       const res = isEdit

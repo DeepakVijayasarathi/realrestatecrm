@@ -191,7 +191,7 @@ export default function LeadDetailPage() {
                 <Select
                   className="w-auto"
                   value={lead.assignedToId ?? ""}
-                  onChange={(e) => e.target.value && act(() => api.post(`/leads/${id}/assign`, { assignedToId: e.target.value }))}
+                  onChange={(e) => e.target.value && act(() => api.post(`/leads/${id}/assign`, { assignedToId: e.target.value, expectedAssignedToId: lead.assignedToId }))}
                   title={hasRole("SALES_MANAGER") ? "Assign to a staff member" : "Transfer this lead to a peer"}
                 >
                   <option value="">{hasRole("SALES_MANAGER") ? "Assign to…" : "Transfer to…"}</option>

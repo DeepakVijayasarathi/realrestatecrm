@@ -41,6 +41,9 @@ const partnerSchema = z.object({
 
 router.get("/", async (req, res, next) => {
   try {
+    // Same rationale as isSalesStaff() above — property staff have no legitimate reason
+    // to see vendor contact/notes data either.
+    if (req.user!.role !== Role.PARTNER_USER && !isSalesStaff(req.user!.role)) throw forbidden();
     // Partner users only see their own company
     const where =
       req.user!.role === Role.PARTNER_USER ? { id: req.user!.partnerCompanyId ?? "__none__" } : {};
@@ -77,6 +80,7 @@ router.get("/:id", async (req, res, next) => {
     if (req.user!.role === Role.PARTNER_USER && req.user!.partnerCompanyId !== req.params.id) {
       throw forbidden();
     }
+    if (req.user!.role !== Role.PARTNER_USER && !isSalesStaff(req.user!.role)) throw forbidden();
     const partner = await prisma.partnerCompany.findUnique({
       where: { id: req.params.id },
       include: { users: { select: { id: true, name: true, email: true, isActive: true } } },

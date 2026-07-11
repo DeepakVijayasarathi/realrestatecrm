@@ -30,6 +30,10 @@ export const createLeadSchema = z.object({
 
 export const updateLeadSchema = createLeadSchema.partial().extend({
   status: z.nativeEnum(LeadStatus).optional(),
+  // The updatedAt the client fetched before opening the edit form — lets the server
+  // detect that someone else saved a change in between and reject a stale overwrite
+  // instead of silently discarding it.
+  expectedUpdatedAt: z.coerce.date().optional(),
 });
 
 export const changeStageSchema = z.object({
@@ -38,6 +42,10 @@ export const changeStageSchema = z.object({
 
 export const assignSchema = z.object({
   assignedToId: z.string().min(1),
+  // What the client saw as the current assignee when it loaded — lets the server detect
+  // two people assigning the same lead at nearly the same moment (only one should win,
+  // with a clear conflict instead of both silently succeeding and double-notifying staff).
+  expectedAssignedToId: z.string().nullable().optional(),
 });
 
 export const noteSchema = z.object({

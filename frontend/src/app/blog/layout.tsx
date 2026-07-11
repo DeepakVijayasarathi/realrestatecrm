@@ -1,5 +1,20 @@
+import { Metadata } from "next";
 import Link from "next/link";
 import ExitIntentModal from "@/components/ExitIntentModal";
+
+// Section-wide default — individual posts override this via their own generateMetadata
+// in blog/[slug]/page.tsx. Without this every blog URL rendered the root layout's
+// generic "RealRest CRM" title/description, so nothing here could rank in search or
+// show a useful link preview when shared.
+export const metadata: Metadata = {
+  title: "Insights & Guides — RealRest",
+  description: "Real estate market trends, buying guides, and neighborhood spotlights from RealRest.",
+  openGraph: {
+    title: "Insights & Guides — RealRest",
+    description: "Real estate market trends, buying guides, and neighborhood spotlights from RealRest.",
+    type: "website",
+  },
+};
 
 export default function BlogLayout({ children }: { children: React.ReactNode }) {
   return (
