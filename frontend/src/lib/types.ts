@@ -33,6 +33,18 @@ export const AVAILABILITY = ["AVAILABLE", "BOOKED", "SOLD", "RENTED", "INACTIVE"
 export const FURNISHING = ["FURNISHED", "SEMI_FURNISHED", "UNFURNISHED"] as const;
 export const PARTNER_SHARE_STATUSES = ["SHARED", "ACCEPTED", "IN_PROGRESS", "CLIENT_CONTACTED", "PROPERTY_SENT", "CONVERTED", "REJECTED", "CLOSED"] as const;
 
+// Native-script label alongside the English name so staff can spot their language at a
+// glance rather than reading only the English name — used by the AI console and the
+// WhatsApp send language picker.
+export const AI_LANGUAGES = [
+  { value: "English", label: "English" },
+  { value: "Tamil", label: "Tamil · தமிழ்" },
+  { value: "Hindi", label: "Hindi · हिन्दी" },
+  { value: "Telugu", label: "Telugu · తెలుగు" },
+  { value: "Kannada", label: "Kannada · ಕನ್ನಡ" },
+  { value: "Malayalam", label: "Malayalam · മലയാളം" },
+] as const;
+
 export interface Lead {
   id: string;
   fullName: string;

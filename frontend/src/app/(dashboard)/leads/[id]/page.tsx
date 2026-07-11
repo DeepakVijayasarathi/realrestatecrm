@@ -9,7 +9,7 @@ import {
   Badge, Button, Card, ErrorBanner, Field, Input, Modal, Select, Spinner, Textarea,
 } from "@/components/ui";
 import {
-  Lead, PIPELINE_STAGES, PartnerCompany, Property, User,
+  AI_LANGUAGES, Lead, PIPELINE_STAGES, PartnerCompany, Property, User,
   fmtDate, fmtMoney, labelize,
 } from "@/lib/types";
 import { ArrowRightLeftIcon, BuildingIcon, SearchIcon, SendIcon } from "@/components/icons";
@@ -45,6 +45,7 @@ export default function LeadDetailPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [templates, setTemplates] = useState<Template[]>([]);
   const [templateKey, setTemplateKey] = useState("property_shortlist");
+  const [whatsAppLanguage, setWhatsAppLanguage] = useState<(typeof AI_LANGUAGES)[number]["value"]>("English");
   const [partners, setPartners] = useState<PartnerCompany[]>([]);
   const [staff, setStaff] = useState<User[]>([]);
   const [noteBody, setNoteBody] = useState("");
@@ -130,7 +131,7 @@ export default function LeadDetailPage() {
     if (selected.size === 0) return setActionError("Select at least one property to send");
     setSending(true);
     await act(
-      () => api.post(`/leads/${id}/send-whatsapp`, { propertyIds: [...selected], templateKey: templateKey || undefined }),
+      () => api.post(`/leads/${id}/send-whatsapp`, { propertyIds: [...selected], templateKey: templateKey || undefined, language: whatsAppLanguage }),
       () => { setSelected(new Set()); setTab("whatsapp"); }
     );
     setSending(false);
@@ -270,6 +271,14 @@ export default function LeadDetailPage() {
                   <Select className="w-auto" value={templateKey} onChange={(e) => setTemplateKey(e.target.value)}>
                     <option value="">No template (auto message)</option>
                     {templates.map((t) => <option key={t.key} value={t.key}>{t.name}</option>)}
+                  </Select>
+                  <Select
+                    className="w-auto"
+                    title="Message language"
+                    value={whatsAppLanguage}
+                    onChange={(e) => setWhatsAppLanguage(e.target.value as (typeof AI_LANGUAGES)[number]["value"])}
+                  >
+                    {AI_LANGUAGES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
                   </Select>
                   <Button variant="secondary" size="sm" onClick={runMatching} disabled={matching}>
                     {matching ? "Matching…" : <><SearchIcon className="mr-1.5 inline h-3.5 w-3.5" />Find matches</>}

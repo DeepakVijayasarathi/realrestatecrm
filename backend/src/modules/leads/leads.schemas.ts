@@ -48,10 +48,13 @@ export const followUpSchema = z.object({
   followUpAt: z.coerce.date(),
 });
 
+export const AI_LANGUAGES = ["English", "Tamil", "Hindi", "Telugu", "Kannada", "Malayalam"] as const;
+
 export const sendWhatsAppSchema = z.object({
   propertyIds: z.array(z.string()).default([]),
   templateKey: z.string().optional(),
   customMessage: z.string().optional(),
+  language: z.enum(AI_LANGUAGES).optional(),
 });
 
 export const sharePartnerSchema = z.object({

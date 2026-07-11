@@ -8,11 +8,9 @@ import {
   AlertTriangleIcon, BotIcon, DollarSignIcon, FileTextIcon, IconType,
   ScaleIcon, SendIcon, SparklesIcon, TrendingUpIcon, ZapIcon,
 } from "@/components/icons";
-import { Lead, Paginated, Property, fmtDate } from "@/lib/types";
+import { AI_LANGUAGES, Lead, Paginated, Property, fmtDate } from "@/lib/types";
 
 type ActionKey = "sales-pitch" | "investment-proposal" | "price-predictor" | "agreement-draft";
-
-const AI_LANGUAGES = ["English", "Tamil", "Hindi", "Telugu", "Kannada", "Malayalam"] as const;
 
 const ACTIONS: { key: ActionKey; icon: IconType; label: string; hint: string }[] = [
   { key: "sales-pitch", icon: SendIcon, label: "Sales Pitch", hint: "WhatsApp-ready, 120–180 words" },
@@ -70,7 +68,7 @@ function ConsoleTab() {
   const [bedrooms, setBedrooms] = useState("");
   const [areaSqft, setAreaSqft] = useState("");
   const [query, setQuery] = useState("");
-  const [language, setLanguage] = useState<(typeof AI_LANGUAGES)[number]>("English");
+  const [language, setLanguage] = useState<(typeof AI_LANGUAGES)[number]["value"]>("English");
   const [busy, setBusy] = useState(false);
   const [entries, setEntries] = useState<ConsoleEntry[]>([]);
 
@@ -165,9 +163,9 @@ function ConsoleTab() {
           <Select
             className="w-auto py-1 text-xs"
             value={language}
-            onChange={(e) => setLanguage(e.target.value as (typeof AI_LANGUAGES)[number])}
+            onChange={(e) => setLanguage(e.target.value as (typeof AI_LANGUAGES)[number]["value"])}
           >
-            {AI_LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
+            {AI_LANGUAGES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
           </Select>
         </div>
         {action && (

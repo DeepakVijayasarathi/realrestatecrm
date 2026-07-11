@@ -30,6 +30,7 @@ import { notify } from "../../services/notification.service";
 import { audit } from "../../services/audit.service";
 import { matchPropertiesForLead } from "../../services/matching.service";
 import { renderTemplate, sendWhatsApp } from "../../services/whatsapp.service";
+import { askAI } from "../../services/openai.service";
 import { runStageAutomation } from "../../services/pipelineAutomation.service";
 import {
   assignSchema,
@@ -770,6 +771,40 @@ router.post("/:id/shortlist", validate(shortlistSchema), async (req, res, next) 
   }
 });
 
+// Translates an already-composed WhatsApp message rather than re-generating it, so
+// prices/URLs/emoji/line breaks stay exactly as composed instead of risking the model
+// altering property details. Logged as AI usage same as the console features; falls
+// back to the original English text if the AI call fails so a translation hiccup never
+// blocks the actual send.
+async function translateForWhatsApp(text: string, language: string, userId: string): Promise<string> {
+  try {
+    const { text: translated, usage, model } = await askAI([
+      {
+        role: "system",
+        content:
+          "You translate WhatsApp business messages for a real estate CRM in Tamil Nadu, India. " +
+          "Translate into the requested language, preserving meaning exactly. Keep all numbers, prices, " +
+          "URLs, and emoji unchanged. Keep line breaks and WhatsApp's single-asterisk *bold* markers exactly " +
+          "where they are — never double asterisks. Output ONLY the translated message, nothing else.",
+      },
+      { role: "user", content: `Translate this into ${language}:\n\n${text}` },
+    ]);
+    prisma.aiUsageLog
+      .create({
+        data: {
+          userId, feature: "whatsapp-translate", model,
+          promptTokens: usage.promptTokens, completionTokens: usage.completionTokens,
+          totalTokens: usage.totalTokens, estimatedCostUsd: usage.estimatedCostUsd,
+        },
+      })
+      .catch((err) => console.error("[ai] failed to log usage:", err));
+    return translated;
+  } catch (err) {
+    console.error("[whatsapp] translation failed, sending original text:", err);
+    return text;
+  }
+}
+
 // ── WhatsApp property sharing ────────────────────────────────────────
 router.post("/:id/send-whatsapp", validate(sendWhatsAppSchema), async (req, res, next) => {
   try {
@@ -778,8 +813,8 @@ router.post("/:id/send-whatsapp", validate(sendWhatsAppSchema), async (req, res,
     const toNumber = lead.whatsappNumber || lead.mobile;
     if (!toNumber) throw badRequest("Lead has no WhatsApp number");
 
-    const { propertyIds, templateKey, customMessage } = req.body as {
-      propertyIds: string[]; templateKey?: string; customMessage?: string;
+    const { propertyIds, templateKey, customMessage, language } = req.body as {
+      propertyIds: string[]; templateKey?: string; customMessage?: string; language?: string;
     };
 
     const properties = propertyIds.length
@@ -822,6 +857,10 @@ router.post("/:id/send-whatsapp", validate(sendWhatsAppSchema), async (req, res,
       body = `Hi ${lead.fullName}, here are some properties matching your requirements:\n\n${propertyBlock}\n\nContact: ${req.user!.name}`;
     } else {
       throw badRequest("Provide propertyIds, a templateKey, or a customMessage");
+    }
+
+    if (language && language !== "English") {
+      body = await translateForWhatsApp(body, language, req.user!.id);
     }
 
     const result = await sendWhatsApp(toNumber, body, lead.fullName, primaryImageUrl);
