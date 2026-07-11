@@ -179,7 +179,18 @@ export default function IntegrationsPanel() {
         {openai.form.provider === "openai" && (
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="API Key"><Input type="password" value={openai.form.apiKey} onChange={(e) => openai.set("apiKey", e.target.value)} placeholder="sk-…" /></Field>
-            <Field label="Model"><Input value={openai.form.model} onChange={(e) => openai.set("model", e.target.value)} placeholder="gpt-4o-mini" /></Field>
+            <Field label="Model">
+              <Input list="openai-models" value={openai.form.model} onChange={(e) => openai.set("model", e.target.value)} placeholder="gpt-4o-mini" />
+              <datalist id="openai-models">
+                <option value="gpt-4o" />
+                <option value="gpt-4o-mini" />
+                <option value="gpt-4.1" />
+                <option value="gpt-4.1-mini" />
+                <option value="gpt-4-turbo" />
+                <option value="o3-mini" />
+                <option value="gpt-3.5-turbo" />
+              </datalist>
+            </Field>
             <Field label="API URL"><Input value={openai.form.apiUrl} onChange={(e) => openai.set("apiUrl", e.target.value)} /></Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Input $ / 1M tokens">
@@ -194,7 +205,15 @@ export default function IntegrationsPanel() {
         {openai.form.provider === "gemini" && (
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="API Key"><Input type="password" value={openai.form.geminiApiKey} onChange={(e) => openai.set("geminiApiKey", e.target.value)} placeholder="AIza…" /></Field>
-            <Field label="Model"><Input value={openai.form.geminiModel} onChange={(e) => openai.set("geminiModel", e.target.value)} placeholder="gemini-1.5-flash" /></Field>
+            <Field label="Model">
+              <Input list="gemini-models" value={openai.form.geminiModel} onChange={(e) => openai.set("geminiModel", e.target.value)} placeholder="gemini-1.5-flash" />
+              <datalist id="gemini-models">
+                <option value="gemini-2.0-flash" />
+                <option value="gemini-1.5-flash" />
+                <option value="gemini-1.5-flash-8b" />
+                <option value="gemini-1.5-pro" />
+              </datalist>
+            </Field>
             <Field label="API URL"><Input value={openai.form.geminiApiUrl} onChange={(e) => openai.set("geminiApiUrl", e.target.value)} /></Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Input $ / 1M tokens">
