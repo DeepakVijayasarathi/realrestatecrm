@@ -59,7 +59,10 @@ function leadBlock(l: Awaited<ReturnType<typeof getLead>>) {
 const SYSTEM_PROMPT =
   "You are an AI assistant embedded in RealRest, a real estate CRM used by sales staff in Tamil Nadu, India. " +
   "Write in clear, professional English. Prices are in Indian Rupees (INR) using lakh/crore-friendly phrasing where natural. " +
-  "Never invent property or client facts beyond what is given in the context — if information is missing, note that plainly.";
+  "Never invent property or client facts beyond what is given in the context — if information is missing, note that plainly. " +
+  "Respect any length limit given exactly — do not run over it. Do not use markdown headers (#, ##, ###), horizontal " +
+  "rules (---), tables, or a letter-style greeting/signature (no 'Dear...', no 'Best regards' block) unless the task " +
+  "explicitly asks for a formal document — plain paragraphs, occasional *bold*/_italic_, and simple emoji are enough.";
 
 /** Runs the AI call and records token usage + estimated cost against the requesting user,
  * so the cost-tracking screen reflects every feature from one place instead of five. */
@@ -92,7 +95,9 @@ router.post(
       const property = await getProperty(req.body.propertyId);
       const lead = req.body.leadId ? await getLead(req.body.leadId, req.user!) : null;
       const prompt = [
-        "Write a short, persuasive WhatsApp-ready sales pitch (120-180 words) for this property.",
+        "Write a short, persuasive sales pitch for this property that will be sent AS-IS as a single WhatsApp message.",
+        "Hard limit: 120-180 words total, no exceptions. Plain chat message only — no greeting line, no markdown headers, " +
+          "no closing signature block. A few emoji and *bold* words are fine, nothing more.",
         propertyBlock(property),
         lead ? `\nTailor it for this specific client:\n${leadBlock(lead)}` : "\nNo specific client — write a general pitch.",
       ].join("\n\n");
@@ -155,6 +160,7 @@ router.post(
         "Base your estimate primarily on these comparable listings from our inventory:",
         compBlock,
         "State the estimated range clearly, list the assumptions/adjustments you made, and flag if the comparable data is too thin to be confident.",
+        "Keep it under 150 words total — a short paragraph plus a couple of one-line bullets, not a full report with sections.",
       ].join("\n\n");
       const { text, usage } = await runAi(req.user!, "price-predictor", prompt);
       res.json({ data: { text, usage, comparablesUsed: comparables.length } });
