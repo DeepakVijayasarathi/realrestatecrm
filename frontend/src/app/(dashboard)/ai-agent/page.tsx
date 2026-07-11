@@ -12,6 +12,8 @@ import { Lead, Paginated, Property, fmtDate } from "@/lib/types";
 
 type ActionKey = "sales-pitch" | "investment-proposal" | "price-predictor" | "agreement-draft";
 
+const AI_LANGUAGES = ["English", "Tamil", "Hindi", "Telugu", "Kannada", "Malayalam"] as const;
+
 const ACTIONS: { key: ActionKey; icon: IconType; label: string; hint: string }[] = [
   { key: "sales-pitch", icon: SendIcon, label: "Sales Pitch", hint: "WhatsApp-ready, 120–180 words" },
   { key: "investment-proposal", icon: FileTextIcon, label: "Investment Proposal", hint: "One-page investor summary" },
@@ -68,6 +70,7 @@ function ConsoleTab() {
   const [bedrooms, setBedrooms] = useState("");
   const [areaSqft, setAreaSqft] = useState("");
   const [query, setQuery] = useState("");
+  const [language, setLanguage] = useState<(typeof AI_LANGUAGES)[number]>("English");
   const [busy, setBusy] = useState(false);
   const [entries, setEntries] = useState<ConsoleEntry[]>([]);
 
@@ -99,23 +102,23 @@ function ConsoleTab() {
       if (!propertyId) return;
       const p = properties.find((x) => x.id === propertyId);
       const l = leads.find((x) => x.id === leadId);
-      run("sales-pitch", { propertyId, leadId: leadId || undefined }, `Generate a sales pitch for "${p?.title}"${l ? ` for client ${l.fullName}` : ""}`);
+      run("sales-pitch", { propertyId, leadId: leadId || undefined, language }, `Generate a sales pitch for "${p?.title}"${l ? ` for client ${l.fullName}` : ""}`);
     } else if (action === "investment-proposal") {
       if (!propertyId) return;
       const p = properties.find((x) => x.id === propertyId);
-      run("investment-proposal", { propertyId }, `Generate an investment proposal for "${p?.title}"`);
+      run("investment-proposal", { propertyId, language }, `Generate an investment proposal for "${p?.title}"`);
     } else if (action === "price-predictor") {
       if (!location || !propertyType) return;
       run(
         "price-predictor",
-        { location, propertyType, bedrooms: bedrooms || undefined, areaSqft: areaSqft || undefined },
+        { location, propertyType, bedrooms: bedrooms || undefined, areaSqft: areaSqft || undefined, language },
         `Predict price for a ${propertyType} in ${location}${bedrooms ? `, ${bedrooms}BR` : ""}${areaSqft ? `, ${areaSqft} sqft` : ""}`
       );
     } else if (action === "agreement-draft") {
       if (!propertyId || !leadId) return;
       const p = properties.find((x) => x.id === propertyId);
       const l = leads.find((x) => x.id === leadId);
-      run("agreement-draft", { propertyId, leadId }, `Draft a sale agreement for "${p?.title}" with buyer ${l?.fullName}`);
+      run("agreement-draft", { propertyId, leadId, language }, `Draft a sale agreement for "${p?.title}" with buyer ${l?.fullName}`);
     }
   }
 
@@ -124,7 +127,7 @@ function ConsoleTab() {
     if (!query.trim() || busy) return;
     const q = query.trim();
     setQuery("");
-    run("ask", { query: q }, q);
+    run("ask", { query: q, language }, q);
   }
 
   return (
@@ -157,6 +160,16 @@ function ConsoleTab() {
 
       {/* Conversation */}
       <Card className="flex flex-col p-4">
+        <div className="mb-3 flex items-center justify-end gap-2 text-xs text-slate-500">
+          <span>Reply language:</span>
+          <Select
+            className="w-auto py-1 text-xs"
+            value={language}
+            onChange={(e) => setLanguage(e.target.value as (typeof AI_LANGUAGES)[number])}
+          >
+            {AI_LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
+          </Select>
+        </div>
         {action && (
           <div className="mb-3 space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
             {(action === "sales-pitch" || action === "investment-proposal" || action === "agreement-draft") && (

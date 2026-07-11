@@ -64,12 +64,22 @@ const SYSTEM_PROMPT =
   "rules (---), tables, or a letter-style greeting/signature (no 'Dear...', no 'Best regards' block) unless the task " +
   "explicitly asks for a formal document — plain paragraphs, occasional *bold*/_italic_, and simple emoji are enough.";
 
+// Languages relevant to the CRM's Tamil Nadu / South India market — sent as a plain
+// instruction rather than a locale code since the model handles that better than we'd
+// gain from formal i18n machinery here.
+const AI_LANGUAGES = ["English", "Tamil", "Hindi", "Telugu", "Kannada", "Malayalam"] as const;
+const languageSchema = z.enum(AI_LANGUAGES).optional();
+
 /** Runs the AI call and records token usage + estimated cost against the requesting user,
  * so the cost-tracking screen reflects every feature from one place instead of five. */
-async function runAi(user: AuthUser, feature: string, prompt: string) {
+async function runAi(user: AuthUser, feature: string, prompt: string, language?: string) {
+  const fullPrompt =
+    language && language !== "English"
+      ? `${prompt}\n\nRespond entirely in ${language} (native script, not transliterated English) — every part of the reply, not just a summary line.`
+      : prompt;
   const { text, usage, model } = await askAI([
     { role: "system", content: SYSTEM_PROMPT },
-    { role: "user", content: prompt },
+    { role: "user", content: fullPrompt },
   ]);
   prisma.aiUsageLog
     .create({
@@ -89,7 +99,7 @@ async function runAi(user: AuthUser, feature: string, prompt: string) {
 
 router.post(
   "/sales-pitch",
-  validate(z.object({ propertyId: z.string().min(1), leadId: z.string().optional() })),
+  validate(z.object({ propertyId: z.string().min(1), leadId: z.string().optional(), language: languageSchema })),
   async (req, res, next) => {
     try {
       const property = await getProperty(req.body.propertyId);
@@ -101,7 +111,7 @@ router.post(
         propertyBlock(property),
         lead ? `\nTailor it for this specific client:\n${leadBlock(lead)}` : "\nNo specific client — write a general pitch.",
       ].join("\n\n");
-      const { text, usage } = await runAi(req.user!, "sales-pitch", prompt);
+      const { text, usage } = await runAi(req.user!, "sales-pitch", prompt, req.body.language);
       res.json({ data: { text, usage } });
     } catch (err) {
       next(err);
@@ -111,7 +121,7 @@ router.post(
 
 router.post(
   "/investment-proposal",
-  validate(z.object({ propertyId: z.string().min(1) })),
+  validate(z.object({ propertyId: z.string().min(1), language: languageSchema })),
   async (req, res, next) => {
     try {
       const property = await getProperty(req.body.propertyId);
@@ -121,7 +131,7 @@ router.post(
         "Use short headed sections, not a wall of text.",
         propertyBlock(property),
       ].join("\n\n");
-      const { text, usage } = await runAi(req.user!, "investment-proposal", prompt);
+      const { text, usage } = await runAi(req.user!, "investment-proposal", prompt, req.body.language);
       res.json({ data: { text, usage } });
     } catch (err) {
       next(err);
@@ -137,6 +147,7 @@ router.post(
       propertyType: z.nativeEnum(PropertyType),
       bedrooms: z.coerce.number().optional(),
       areaSqft: z.coerce.number().optional(),
+      language: languageSchema,
     })
   ),
   async (req, res, next) => {
@@ -162,7 +173,7 @@ router.post(
         "State the estimated range clearly, list the assumptions/adjustments you made, and flag if the comparable data is too thin to be confident.",
         "Keep it under 150 words total — a short paragraph plus a couple of one-line bullets, not a full report with sections.",
       ].join("\n\n");
-      const { text, usage } = await runAi(req.user!, "price-predictor", prompt);
+      const { text, usage } = await runAi(req.user!, "price-predictor", prompt, req.body.language);
       res.json({ data: { text, usage, comparablesUsed: comparables.length } });
     } catch (err) {
       next(err);
@@ -172,7 +183,7 @@ router.post(
 
 router.post(
   "/agreement-draft",
-  validate(z.object({ propertyId: z.string().min(1), leadId: z.string().min(1) })),
+  validate(z.object({ propertyId: z.string().min(1), leadId: z.string().min(1), language: languageSchema })),
   async (req, res, next) => {
     try {
       const property = await getProperty(req.body.propertyId);
@@ -184,7 +195,7 @@ router.post(
         `\nProperty:\n${propertyBlock(property)}`,
         `\nBuyer (client):\n${leadBlock(lead)}\nMobile: ${lead.mobile}`,
       ].join("\n\n");
-      const { text, usage } = await runAi(req.user!, "agreement-draft", prompt);
+      const { text, usage } = await runAi(req.user!, "agreement-draft", prompt, req.body.language);
       res.json({ data: { text, usage } });
     } catch (err) {
       next(err);
@@ -194,11 +205,11 @@ router.post(
 
 router.post(
   "/ask",
-  validate(z.object({ query: z.string().min(1).max(2000) })),
+  validate(z.object({ query: z.string().min(1).max(2000), language: languageSchema })),
   async (req, res, next) => {
     try {
       if (!req.body.query.trim()) throw badRequest("Query is required");
-      const { text, usage } = await runAi(req.user!, "ask", req.body.query);
+      const { text, usage } = await runAi(req.user!, "ask", req.body.query, req.body.language);
       res.json({ data: { text, usage } });
     } catch (err) {
       next(err);
