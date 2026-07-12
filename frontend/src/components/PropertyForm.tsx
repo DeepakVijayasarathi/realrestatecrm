@@ -8,6 +8,7 @@ import { AVAILABILITY, FURNISHING, PROPERTY_CATEGORIES, PROPERTY_TYPES, Property
 import { CameraIcon, MapPinIcon, UploadIcon, XIcon } from "@/components/icons";
 import { extractYouTubeId } from "@/lib/youtube";
 import CameraCapture from "@/components/CameraCapture";
+import { useCurrencies } from "@/lib/useCurrencies";
 
 // Digits plus the punctuation a phone number is actually written with.
 const PHONE_CHARS = /[^\d+\s().-]/g;
@@ -17,6 +18,7 @@ function sanitizePhone(v: string) {
 
 export default function PropertyForm({ initial, onSaved }: { initial?: Property; onSaved?: (p: Property) => void }) {
   const isEdit = !!initial;
+  const currencies = useCurrencies();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -162,8 +164,12 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
 
   async function removeImage(imageId: string) {
     if (!initial) return;
-    await api.del(`/properties/${initial.id}/images/${imageId}`).catch(() => {});
-    setImages((imgs) => imgs.filter((i) => i.id !== imageId));
+    try {
+      await api.del(`/properties/${initial.id}/images/${imageId}`);
+      setImages((imgs) => imgs.filter((i) => i.id !== imageId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to remove image");
+    }
   }
 
   async function uploadVideo(file: File) {
@@ -193,8 +199,12 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
 
   async function removeVideo() {
     if (!initial) return;
-    await api.del(`/properties/${initial.id}/video`).catch(() => {});
-    setVideoUrl(null);
+    try {
+      await api.del(`/properties/${initial.id}/video`);
+      setVideoUrl(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to remove video");
+    }
   }
 
   function useMyLocation() {
@@ -263,7 +273,7 @@ export default function PropertyForm({ initial, onSaved }: { initial?: Property;
         </Field>
         <Field label="Currency">
           <Select value={form.currency} onChange={(e) => set("currency", e.target.value)}>
-            {["INR", "USD", "AED", "EUR"].map((c) => <option key={c}>{c}</option>)}
+            {currencies.map((c) => <option key={c}>{c}</option>)}
           </Select>
         </Field>
         <Field label="Availability">

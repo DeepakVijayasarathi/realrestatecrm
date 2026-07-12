@@ -4,13 +4,17 @@ import { Role } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { requireAuth, requireRole } from "../../middleware/auth";
 import { validate } from "../../middleware/validate";
+import { forbidden } from "../../lib/errors";
 
 const router = Router();
 router.use(requireAuth);
 
-// Templates — read for staff, write for admins/managers
-router.get("/templates", async (_req, res, next) => {
+// Templates — read for internal staff, write for admins/managers. Partners have no
+// legitimate reason to see internal message templates (same rationale used for vendor
+// data in partners.routes.ts) — this was previously open to any authenticated user.
+router.get("/templates", async (req, res, next) => {
   try {
+    if (req.user!.role === Role.PARTNER_USER) throw forbidden();
     const templates = await prisma.whatsAppTemplate.findMany({ orderBy: { name: "asc" } });
     res.json({ data: templates });
   } catch (err) {

@@ -90,6 +90,13 @@ router.put("/:id", requireRole(), validate(updateUserSchema), async (req, res, n
     if (resultingRole === Role.PARTNER_USER && !resultingPartnerCompanyId) {
       throw badRequest("partnerCompanyId is required when role is PARTNER_USER");
     }
+    // Every route in this module requires Super Admin — deactivating or demoting your
+    // own account here would lock you out with no path back short of direct DB access.
+    // Only the frontend hid the button; nothing stopped calling this route directly.
+    if (req.params.id === req.user!.id) {
+      if (req.body.isActive === false) throw badRequest("You cannot deactivate your own account");
+      if (req.body.role !== undefined && req.body.role !== existing.role) throw badRequest("You cannot change your own role");
+    }
     const { password, ...rest } = req.body;
     const data: Record<string, unknown> = { ...rest };
     if (rest.email) data.email = rest.email.toLowerCase();

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ApiError, api } from "@/lib/api";
 import { Button, ErrorBanner, Field, Input, Select, Textarea } from "@/components/ui";
 import { Lead, LEAD_SOURCES, PRIORITIES, PROPERTY_TYPES, User, labelize } from "@/lib/types";
+import { useCurrencies } from "@/lib/useCurrencies";
 
 interface Props {
   initial?: Partial<Lead>;
@@ -25,6 +26,7 @@ function sanitizePhone(v: string) {
 
 export default function LeadForm({ initial, onSaved, onCancel }: Props) {
   const isEdit = !!initial?.id;
+  const currencies = useCurrencies();
   const [staff, setStaff] = useState<User[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -146,7 +148,7 @@ export default function LeadForm({ initial, onSaved, onCancel }: Props) {
         </Field>
         <Field label="Currency">
           <Select value={form.currency} onChange={(e) => set("currency", e.target.value)}>
-            {["INR", "USD", "AED", "EUR"].map((c) => <option key={c}>{c}</option>)}
+            {currencies.map((c) => <option key={c}>{c}</option>)}
           </Select>
         </Field>
         <Field label="Bedrooms">

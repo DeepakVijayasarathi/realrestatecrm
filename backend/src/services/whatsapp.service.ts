@@ -193,7 +193,13 @@ export async function sendWhatsApp(toNumber: string, body: string, contactName?:
   return provider.sendText(toNumber, body, contactName, mediaUrl);
 }
 
-/** Replace {{placeholders}} in a template body with values. */
+/** Replace {{placeholders}} in a template body with values. Different callers support
+ * different variable sets for the same WhatsAppTemplate.body field (manual shares fill
+ * name/agent/properties; stage-automation sends fill name/agent/time) — a placeholder
+ * valid in one context but typed into a template used in the other would previously
+ * vanish as an empty string with no trace. Leaving the literal {{key}} in place when
+ * it's not recognized at least makes the mistake visible instead of silently deleting
+ * a chunk of every message sent from that template. */
 export function renderTemplate(body: string, vars: Record<string, string>) {
-  return body.replace(/\{\{(\w+)\}\}/g, (_, key: string) => vars[key] ?? "");
+  return body.replace(/\{\{(\w+)\}\}/g, (match, key: string) => vars[key] ?? match);
 }
