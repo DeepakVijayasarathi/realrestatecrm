@@ -25,7 +25,7 @@ export const PIPELINE_STAGES = [
 ] as const;
 export type PipelineStage = (typeof PIPELINE_STAGES)[number];
 
-export const LEAD_SOURCES = ["WEBSITE_FORM", "MANUAL", "REFERRAL", "WHATSAPP", "IMPORT", "PARTNER", "META_ADS"] as const;
+export const LEAD_SOURCES = ["VISA_FORM", "WEBSITE_FORM", "MANUAL", "REFERRAL", "WHATSAPP", "IMPORT", "PARTNER", "META_ADS"] as const;
 export const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"] as const;
 export const PROPERTY_TYPES = ["APARTMENT", "VILLA", "TOWNHOUSE", "PENTHOUSE", "STUDIO", "PLOT", "OFFICE", "RETAIL", "WAREHOUSE", "OTHER"] as const;
 export const PROPERTY_CATEGORIES = ["SALE", "RENT", "LEASE", "COMMERCIAL", "RESIDENTIAL"] as const;
