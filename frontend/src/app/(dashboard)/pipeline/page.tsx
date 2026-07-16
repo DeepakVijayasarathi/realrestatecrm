@@ -5,7 +5,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { Badge, ErrorBanner, PageHeader, Select, Spinner } from "@/components/ui";
 import { KanbanIcon } from "@/components/icons";
-import { Lead, PIPELINE_STAGES, PipelineStage, fmtMoney, labelize } from "@/lib/types";
+import { AUTO_MESSAGE_STAGES, Lead, PIPELINE_STAGES, PipelineStage, fmtMoney, labelize } from "@/lib/types";
 
 type Board = Record<string, { leads: Lead[]; total: number }>;
 
@@ -76,7 +76,7 @@ export default function PipelinePage() {
       <PageHeader
         icon={KanbanIcon}
         title="Pipeline Board"
-        subtitle="Drag cards between stages — statuses and automations follow"
+        subtitle="Drag cards between stages — some stages (marked ✉ in the mobile select) send an automated WhatsApp to the client"
       />
       <ErrorBanner message={error} />
       <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-4">
@@ -130,10 +130,17 @@ export default function PipelinePage() {
                         only way to change stage on mobile/tablet. */}
                     <Select
                       className="mt-2 py-1 text-[11px]"
+                      title="Stages marked ✉ send an automated WhatsApp to the client"
                       value={stage}
                       onChange={(e) => moveLead(lead.id, e.target.value as PipelineStage)}
                     >
-                      {PIPELINE_STAGES.map((s) => <option key={s} value={s}>{labelize(s)}</option>)}
+                      {PIPELINE_STAGES.map((s) => (
+                        <option key={s} value={s} disabled={s === "SHARED_TO_PARTNER"}>
+                          {labelize(s)}
+                          {AUTO_MESSAGE_STAGES.has(s) ? " ✉" : ""}
+                          {s === "SHARED_TO_PARTNER" ? " (use Share to partner)" : ""}
+                        </option>
+                      ))}
                     </Select>
                   </div>
                 ))}

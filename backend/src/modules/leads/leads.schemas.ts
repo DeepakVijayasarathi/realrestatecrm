@@ -94,13 +94,22 @@ export const statusToStage: Partial<Record<LeadStatus, PipelineStage>> = {
   INVALID: PipelineStage.LOST_CLOSED,
 };
 
+// PipelineStage has finer granularity than LeadStatus (13 stages vs 10 statuses), so a
+// few stages share the nearest sensible status rather than getting one each. Every
+// stage MUST have an entry here — a missing one previously meant moving a lead to that
+// stage left its status badge showing a stale, contradictory value (e.g. a lead moved to
+// Site Visit Completed kept showing status "New" indefinitely).
 export const stageToStatus: Partial<Record<PipelineStage, LeadStatus>> = {
   NEW_LEAD: LeadStatus.NEW,
   INITIAL_CONTACT: LeadStatus.CONTACTED,
+  REQUIREMENT_ANALYSIS: LeadStatus.CONTACTED,
+  PROPERTY_MATCHING: LeadStatus.CONTACTED,
   PROPERTY_SHARED: LeadStatus.PROPERTY_SHARED,
   FOLLOW_UP_PENDING: LeadStatus.FOLLOW_UP,
   SITE_VISIT_SCHEDULED: LeadStatus.INTERESTED,
+  SITE_VISIT_COMPLETED: LeadStatus.INTERESTED,
   NEGOTIATION: LeadStatus.NEGOTIATION,
+  BANK_LOAN: LeadStatus.NEGOTIATION,
   SHARED_TO_PARTNER: LeadStatus.SHARED_TO_PARTNER,
   REGISTRATION: LeadStatus.CONVERTED,
   LOST_CLOSED: LeadStatus.CLOSED_LOST,

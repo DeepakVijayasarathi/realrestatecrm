@@ -29,6 +29,13 @@ export const PIPELINE_STAGES = [
 ] as const;
 export type PipelineStage = (typeof PIPELINE_STAGES)[number];
 
+// Stages that fire an automated WhatsApp message to the client the moment a lead is
+// moved there (see backend pipelineAutomation.service.ts TEMPLATE_BY_STAGE) — surfaced
+// in stage-change dropdowns so picking one isn't a silent send.
+export const AUTO_MESSAGE_STAGES = new Set<PipelineStage>([
+  "INITIAL_CONTACT", "FOLLOW_UP_PENDING", "SITE_VISIT_SCHEDULED", "SITE_VISIT_COMPLETED", "NEGOTIATION", "BANK_LOAN", "REGISTRATION",
+]);
+
 export const LEAD_SOURCES = ["VISA_FORM", "WEBSITE_FORM", "MANUAL", "REFERRAL", "WHATSAPP", "IMPORT", "PARTNER", "META_ADS"] as const;
 export const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"] as const;
 export const PROPERTY_TYPES = ["APARTMENT", "VILLA", "TOWNHOUSE", "PENTHOUSE", "STUDIO", "PLOT", "OFFICE", "RETAIL", "WAREHOUSE", "OTHER"] as const;

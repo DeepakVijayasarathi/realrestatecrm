@@ -10,7 +10,7 @@ import {
   Badge, Button, Card, ErrorBanner, Field, Input, Modal, Select, Spinner, Textarea,
 } from "@/components/ui";
 import {
-  AI_LANGUAGES, Lead, PIPELINE_STAGES, PartnerCompany, Property, User,
+  AI_LANGUAGES, AUTO_MESSAGE_STAGES, Lead, PIPELINE_STAGES, PartnerCompany, Property, User,
   fmtDate, fmtMoney, labelize,
 } from "@/lib/types";
 import { ArrowRightLeftIcon, BuildingIcon, SearchIcon, SendIcon } from "@/components/icons";
@@ -188,10 +188,17 @@ export default function LeadDetailPage() {
           <div className="flex flex-wrap gap-2">
             <Select
               className="w-auto"
+              title="Stages marked ✉ send an automated WhatsApp to the client"
               value={lead.stage}
               onChange={(e) => act(() => api.post(`/leads/${id}/change-stage`, { stage: e.target.value }), undefined, `Stage updated to ${labelize(e.target.value)}`)}
             >
-              {PIPELINE_STAGES.map((s) => <option key={s} value={s}>{labelize(s)}</option>)}
+              {PIPELINE_STAGES.map((s) => (
+                <option key={s} value={s} disabled={s === "SHARED_TO_PARTNER"}>
+                  {labelize(s)}
+                  {AUTO_MESSAGE_STAGES.has(s) ? " ✉ sends WhatsApp" : ""}
+                  {s === "SHARED_TO_PARTNER" ? " (use Share to partner below)" : ""}
+                </option>
+              ))}
             </Select>
             {staff.length > 0 && (
               <div className="flex items-center gap-1.5">
@@ -404,7 +411,7 @@ export default function LeadDetailPage() {
                           To {w.toNumber} · by {w.sentBy.name} · {fmtDate(w.createdAt, true)}
                           {w.template && ` · template: ${w.template.name}`}
                         </span>
-                        <Badge value={w.status} />
+                        <span className="flex items-center gap-1 text-xs text-slate-400">Delivery: <Badge value={w.status} /></span>
                       </div>
                       <p className="whitespace-pre-wrap text-sm text-slate-700">{w.body}</p>
                     </div>
@@ -418,7 +425,7 @@ export default function LeadDetailPage() {
                     <div key={s.id} className="rounded-lg border border-slate-200 p-3 text-sm">
                       <div className="flex items-center justify-between">
                         <span className="font-medium">{s.partner.name}</span>
-                        <Badge value={s.status} />
+                        <span className="flex items-center gap-1 text-xs text-slate-400">Referral: <Badge value={s.status} /></span>
                       </div>
                       <p className="text-xs text-slate-400">Shared by {s.sharedBy.name} · {fmtDate(s.createdAt, true)}</p>
                       {s.notesShared && <p className="mt-1 text-xs text-slate-600">{s.notesShared}</p>}

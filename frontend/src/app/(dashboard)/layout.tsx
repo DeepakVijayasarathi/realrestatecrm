@@ -43,7 +43,7 @@ const NAV_SECTIONS = [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboardIcon, roles: null },
       { href: "/leads", label: "CRM pipeline", icon: UsersIcon, roles: ["SALES_MANAGER", "SALES_EXECUTIVE", "PARTNER_USER"] },
       { href: "/properties", label: "Properties Inventory", icon: BuildingIcon, roles: null },
-      { href: "/partners", label: "Vendor Network", icon: BriefcaseIcon, roles: ["SALES_MANAGER", "SALES_EXECUTIVE", "PARTNER_USER"] },
+      { href: "/partners", label: "Partner Network", icon: BriefcaseIcon, roles: ["SALES_MANAGER", "SALES_EXECUTIVE", "PARTNER_USER"] },
       { href: "/site-visits", label: "Site Visits & Appts", icon: CalendarIcon, roles: ["SALES_MANAGER", "SALES_EXECUTIVE"] },
     ],
   },

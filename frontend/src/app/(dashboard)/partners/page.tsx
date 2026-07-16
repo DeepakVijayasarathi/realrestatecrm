@@ -132,7 +132,7 @@ export default function PartnersPage() {
     <div className="space-y-4">
       <PageHeader
         icon={BriefcaseIcon}
-        title={isPartner ? "Shared Leads" : "Vendor Network"}
+        title={isPartner ? "Shared Leads" : "Partner Network"}
         subtitle={isPartner ? "Leads referred to your company" : "Manage partner companies and track shared referrals"}
         actions={canManage && <Button onClick={() => openForm()}>+ Add partner</Button>}
       />

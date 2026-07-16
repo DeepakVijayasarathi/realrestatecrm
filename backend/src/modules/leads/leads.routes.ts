@@ -47,6 +47,18 @@ import {
   updateLeadSchema,
 } from "./leads.schemas";
 
+// Same left-to-right order as the frontend's PIPELINE_STAGES (kept in sync manually —
+// this only exists to answer "is stage A further along than stage B", not to drive any
+// display). Used so an action that shares properties never regresses a lead that has
+// already moved past that point, e.g. an agent sending one more property mid-Negotiation
+// shouldn't silently snap the Kanban card backward to Property Shared.
+const STAGE_ORDER: PipelineStage[] = [
+  PipelineStage.NEW_LEAD, PipelineStage.INITIAL_CONTACT, PipelineStage.REQUIREMENT_ANALYSIS,
+  PipelineStage.PROPERTY_MATCHING, PipelineStage.SHARED_TO_PARTNER, PipelineStage.PROPERTY_SHARED,
+  PipelineStage.FOLLOW_UP_PENDING, PipelineStage.SITE_VISIT_SCHEDULED, PipelineStage.SITE_VISIT_COMPLETED,
+  PipelineStage.NEGOTIATION, PipelineStage.BANK_LOAN, PipelineStage.REGISTRATION, PipelineStage.LOST_CLOSED,
+];
+
 const router = Router();
 
 const leadInclude = {
@@ -696,6 +708,14 @@ router.post("/:id/change-stage", validate(changeStageSchema), async (req, res, n
     if (req.user!.role === Role.PARTNER_USER) throw forbidden();
     const stage: PipelineStage = req.body.stage;
     if (stage === existing.stage) return res.json({ data: existing });
+    // Moving here directly (drag-and-drop or the stage dropdown) would show "Shared To
+    // Partner" everywhere without ever actually sharing the lead with anyone — no
+    // PartnerLeadShare row gets created, so the lead's own Partner shares tab would
+    // still say "not shared" while its stage claims otherwise. The dedicated share
+    // endpoint (POST /:id/share-partner) is the only path that keeps both true at once.
+    if (stage === PipelineStage.SHARED_TO_PARTNER) {
+      throw badRequest("Use \"Share to partner\" to move a lead to this stage — it records who it was shared with, which a plain stage change can't.");
+    }
     const impliedStatus = stageToStatus[stage];
     const lead = await prisma.lead.update({
       where: { id: existing.id },
@@ -897,25 +917,40 @@ router.post("/:id/send-whatsapp", validate(sendWhatsAppSchema), async (req, res,
     });
 
     if (result.status !== "FAILED" && properties.length) {
-      // Workflow 1: mark shared, move stage, auto-create follow-up in 2 days
-      const followUpAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
-      await prisma.lead.update({
-        where: { id: lead.id },
-        data: {
-          status: LeadStatus.PROPERTY_SHARED,
-          stage: PipelineStage.PROPERTY_SHARED,
-          followUpAt: lead.followUpAt ?? followUpAt,
-        },
-      });
-      if (lead.stage !== PipelineStage.PROPERTY_SHARED) {
-        await prisma.pipelineHistory.create({
-          data: { leadId: lead.id, fromStage: lead.stage, toStage: PipelineStage.PROPERTY_SHARED, changedById: req.user!.id },
+      // Only advance to Property Shared if the lead hasn't already moved past that point
+      // in the pipeline — otherwise sending one more property mid-Negotiation (a normal
+      // thing to do late in a deal) would silently snap the lead's stage/status backward.
+      const currentIdx = STAGE_ORDER.indexOf(lead.stage);
+      const propertySharedIdx = STAGE_ORDER.indexOf(PipelineStage.PROPERTY_SHARED);
+      if (currentIdx === -1 || currentIdx < propertySharedIdx) {
+        const followUpAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+        await prisma.lead.update({
+          where: { id: lead.id },
+          data: {
+            status: LeadStatus.PROPERTY_SHARED,
+            stage: PipelineStage.PROPERTY_SHARED,
+            followUpAt: lead.followUpAt ?? followUpAt,
+          },
         });
+        if (lead.stage !== PipelineStage.PROPERTY_SHARED) {
+          await prisma.pipelineHistory.create({
+            data: { leadId: lead.id, fromStage: lead.stage, toStage: PipelineStage.PROPERTY_SHARED, changedById: req.user!.id },
+          });
+        }
       }
-      await prisma.propertyMatch.updateMany({
-        where: { leadId: lead.id, propertyId: { in: propertyIds } },
-        data: { sharedViaWhatsApp: true },
-      });
+      // Upsert (not just update) so a property sent straight from "Find matches" —
+      // without ever clicking "Save shortlist" first — still shows up as already-shared
+      // the next time this lead is opened, instead of only being visible in the
+      // separate WhatsApp tab.
+      await Promise.all(
+        propertyIds.map((propertyId) =>
+          prisma.propertyMatch.upsert({
+            where: { leadId_propertyId: { leadId: lead.id, propertyId } },
+            create: { leadId: lead.id, propertyId, score: 0, savedById: req.user!.id, sharedViaWhatsApp: true },
+            update: { sharedViaWhatsApp: true },
+          })
+        )
+      );
       if (lead.assignedToId) {
         await notify({
           userId: lead.assignedToId,
@@ -962,17 +997,24 @@ router.post("/:id/share-partner", validate(sharePartnerSchema), async (req, res,
       },
       include: { partner: { select: { id: true, name: true } } },
     });
+    // Same reasoning as the send-whatsapp regression guard above: sharing with a backup
+    // partner mid-Negotiation is a normal supplementary action, not a reason to snap an
+    // already-advanced lead's stage back to Shared To Partner.
+    const currentIdx = STAGE_ORDER.indexOf(lead.stage);
+    const sharedToPartnerIdx = STAGE_ORDER.indexOf(PipelineStage.SHARED_TO_PARTNER);
+    const shouldAdvanceStage = currentIdx === -1 || currentIdx < sharedToPartnerIdx;
     await prisma.lead.update({
       where: { id: lead.id },
       data: {
         partnerCompanyId: partner.id,
-        status: LeadStatus.SHARED_TO_PARTNER,
-        stage: PipelineStage.SHARED_TO_PARTNER,
+        ...(shouldAdvanceStage ? { status: LeadStatus.SHARED_TO_PARTNER, stage: PipelineStage.SHARED_TO_PARTNER } : {}),
       },
     });
-    await prisma.pipelineHistory.create({
-      data: { leadId: lead.id, fromStage: lead.stage, toStage: PipelineStage.SHARED_TO_PARTNER, changedById: req.user!.id },
-    });
+    if (shouldAdvanceStage) {
+      await prisma.pipelineHistory.create({
+        data: { leadId: lead.id, fromStage: lead.stage, toStage: PipelineStage.SHARED_TO_PARTNER, changedById: req.user!.id },
+      });
+    }
     await logActivity(lead.id, req.user!.id, ActivityType.SHARED_TO_PARTNER, `Shared with ${partner.name}`);
 
     // Send the lead's requirement + shortlisted properties to the partner on WhatsApp
