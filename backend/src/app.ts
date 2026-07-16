@@ -24,7 +24,10 @@ export function createApp() {
   // `verify` stashes the raw bytes on req.rawBody, needed to check the Meta
   // webhook's HMAC signature over the exact payload sent (not our re-serialized copy).
   app.use(express.json({ limit: "2mb", verify: (req, _res, buf) => { (req as express.Request).rawBody = buf; } }));
-  app.use("/uploads", express.static(UPLOAD_DIR));
+  // Uploaded docs (PDF/CSV/XLSX) are only extension-checked, not content-verified like
+  // images/videos are (see middleware/upload.ts) — nosniff stops a browser from executing
+  // a mislabeled file (e.g. "brochure.pdf" containing HTML/JS) when opened directly.
+  app.use("/uploads", (_req, res, next) => { res.setHeader("X-Content-Type-Options", "nosniff"); next(); }, express.static(UPLOAD_DIR));
 
   app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
   app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openApiSpec));

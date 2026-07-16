@@ -333,7 +333,7 @@ export default function LeadDetailPage() {
               )}
 
               {propertyList.length === 0 && searchResults === null && (
-                <p className="text-sm text-slate-500">Click “Find matches” to score current inventory against this lead's requirements, or search properties manually above.</p>
+                <p className="text-sm text-slate-500">Click &ldquo;Find matches&rdquo; to score current inventory against this lead&apos;s requirements, or search properties manually above.</p>
               )}
 
               {propertyList.map((m) => (

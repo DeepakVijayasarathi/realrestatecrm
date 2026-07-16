@@ -43,13 +43,13 @@ export default function ExitIntentModal() {
         {submitted ? (
           <div className="py-4 text-center">
             <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100"><CheckIcon className="h-5 w-5 text-emerald-600" /></div>
-            <p className="text-sm font-medium text-slate-800">Thanks! We'll text you the price guide shortly.</p>
+            <p className="text-sm font-medium text-slate-800">Thanks! We&apos;ll text you the price guide shortly.</p>
           </div>
         ) : (
           <>
             <h3 className="text-lg font-semibold text-slate-800">Wait — before you go</h3>
             <p className="mt-1.5 text-sm text-slate-500">
-              Get today's local property price ranges sent straight to your phone, free.
+              Get today&apos;s local property price ranges sent straight to your phone, free.
             </p>
             <ErrorBanner message={error} />
             <form onSubmit={submit} className="mt-4 space-y-3">

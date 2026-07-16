@@ -37,7 +37,7 @@ export default function BlogLeadForm({ sourceTag }: { sourceTag: string }) {
     return (
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
         <div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100"><CheckIcon className="h-5 w-5 text-emerald-600" /></div>
-        <p className="text-sm font-medium text-emerald-800">Thanks! We'll be in touch shortly.</p>
+        <p className="text-sm font-medium text-emerald-800">Thanks! We&apos;ll be in touch shortly.</p>
       </div>
     );
   }

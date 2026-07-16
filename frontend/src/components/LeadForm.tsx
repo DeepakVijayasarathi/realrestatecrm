@@ -178,7 +178,7 @@ export default function LeadForm({ initial, onSaved, onCancel }: Props) {
       </div>
       {isEdit && (
         <p className="text-xs text-slate-500">
-          To reassign or transfer this lead, use the assign/transfer dropdown on the lead's detail page.
+          To reassign or transfer this lead, use the assign/transfer dropdown on the lead&apos;s detail page.
         </p>
       )}
       <Field label="Requirement notes">

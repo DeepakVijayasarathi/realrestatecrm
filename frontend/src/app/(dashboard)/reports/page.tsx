@@ -106,7 +106,7 @@ export default function ReportsPage() {
             <span><span className="mr-1 inline-block h-2 w-2 rounded-full bg-emerald-400" />Converted</span>
           </div>
           <span>
-            Pipeline value (this period's budgets):{" "}
+            Pipeline value (this period&apos;s budgets):{" "}
             <span className="font-semibold text-slate-700">
               {monthly.reduce((sum, m) => sum + m.pipelineValue, 0).toLocaleString("en-IN")}
             </span>

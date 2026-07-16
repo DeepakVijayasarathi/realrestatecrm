@@ -164,9 +164,9 @@ export default function IntegrationsPanel() {
         {whatsapp.form.provider !== "mock" && (
           <div className="mt-3 border-t border-slate-100 pt-3">
             <p className="text-xs text-slate-500">
-              Delivery-status webhook — lets "Sent" update to Delivered/Read/Failed once the provider confirms it, instead of staying "Sent" forever.
+              Delivery-status webhook — lets &quot;Sent&quot; update to Delivered/Read/Failed once the provider confirms it, instead of staying &quot;Sent&quot; forever.
               URL: <code className="rounded bg-slate-100 px-1">/api/whatsapp/webhook/status</code>.
-              Meta Cloud API verifies itself via the App Secret above; other providers (SmartPing/AiSensy, MSG91) need this secret pasted into their dashboard's webhook config as an <code className="rounded bg-slate-100 px-1">X-Webhook-Secret</code> header.
+              Meta Cloud API verifies itself via the App Secret above; other providers (SmartPing/AiSensy, MSG91) need this secret pasted into their dashboard&apos;s webhook config as an <code className="rounded bg-slate-100 px-1">X-Webhook-Secret</code> header.
             </p>
             <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Status Webhook Secret"><Input type="password" value={whatsapp.form.statusWebhookSecret} onChange={(e) => whatsapp.set("statusWebhookSecret", e.target.value)} /></Field>
@@ -257,7 +257,7 @@ export default function IntegrationsPanel() {
       {/* Website sync */}
       <Card className="p-4">
         <h3 className="text-sm font-semibold">Public website property sync</h3>
-        <p className="mt-0.5 text-xs text-slate-500">Pushes property changes to your website's API, and lets your website push properties back in via <code className="rounded bg-slate-100 px-1">/api/integrations/website/properties</code>.</p>
+        <p className="mt-0.5 text-xs text-slate-500">Pushes property changes to your website&apos;s API, and lets your website push properties back in via <code className="rounded bg-slate-100 px-1">/api/integrations/website/properties</code>.</p>
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Website API URL"><Input value={websiteSync.form.apiUrl} onChange={(e) => websiteSync.set("apiUrl", e.target.value)} placeholder="https://yoursite.com/api" /></Field>
           <Field label="Website API Key"><Input type="password" value={websiteSync.form.apiKey} onChange={(e) => websiteSync.set("apiKey", e.target.value)} /></Field>
