@@ -15,6 +15,7 @@ interface WhatsAppSettings {
   msg91WhatsappUrl: string;
   smartpingApiKey: string;
   smartpingCampaignName: string;
+  statusWebhookSecret: string;
 }
 interface OpenAiSettings {
   provider: "openai" | "gemini";
@@ -158,6 +159,18 @@ export default function IntegrationsPanel() {
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="API Key"><Input type="password" value={whatsapp.form.smartpingApiKey} onChange={(e) => whatsapp.set("smartpingApiKey", e.target.value)} /></Field>
             <Field label="Campaign Name (Live, not the template name)"><Input value={whatsapp.form.smartpingCampaignName} onChange={(e) => whatsapp.set("smartpingCampaignName", e.target.value)} /></Field>
+          </div>
+        )}
+        {whatsapp.form.provider !== "mock" && (
+          <div className="mt-3 border-t border-slate-100 pt-3">
+            <p className="text-xs text-slate-500">
+              Delivery-status webhook — lets "Sent" update to Delivered/Read/Failed once the provider confirms it, instead of staying "Sent" forever.
+              URL: <code className="rounded bg-slate-100 px-1">/api/whatsapp/webhook/status</code>.
+              Meta Cloud API verifies itself via the App Secret above; other providers (SmartPing/AiSensy, MSG91) need this secret pasted into their dashboard's webhook config as an <code className="rounded bg-slate-100 px-1">X-Webhook-Secret</code> header.
+            </p>
+            <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Status Webhook Secret"><Input type="password" value={whatsapp.form.statusWebhookSecret} onChange={(e) => whatsapp.set("statusWebhookSecret", e.target.value)} /></Field>
+            </div>
           </div>
         )}
         <SaveBar busy={whatsapp.busy} saved={whatsapp.saved} error={whatsapp.error} onSave={whatsapp.save} />

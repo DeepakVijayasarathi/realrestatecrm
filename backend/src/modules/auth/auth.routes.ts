@@ -9,15 +9,22 @@ import { validate } from "../../middleware/validate";
 import { sendEmail } from "../../services/email.service";
 import { audit } from "../../services/audit.service";
 import { env } from "../../config/env";
+import { rateLimitByIp } from "../../lib/rateLimit";
 
 const router = Router();
+
+// Credential-guessing and reset-token-guessing endpoints — throttle per IP so they
+// can't be brute-forced (these had no limiter at all before, unlike every other
+// externally-reachable endpoint in the app).
+const loginRateLimit = rateLimitByIp(20, 10 * 60 * 1000);
+const resetRateLimit = rateLimitByIp(10, 10 * 60 * 1000);
 
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
 });
 
-router.post("/login", validate(loginSchema), async (req, res, next) => {
+router.post("/login", loginRateLimit, validate(loginSchema), async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
@@ -43,6 +50,7 @@ router.post("/login", validate(loginSchema), async (req, res, next) => {
 
 router.post(
   "/forgot-password",
+  resetRateLimit,
   validate(z.object({ email: z.string().email() })),
   async (req, res, next) => {
     try {
@@ -69,6 +77,7 @@ router.post(
 
 router.post(
   "/reset-password",
+  resetRateLimit,
   validate(z.object({ token: z.string().min(10), password: z.string().min(8) })),
   async (req, res, next) => {
     try {

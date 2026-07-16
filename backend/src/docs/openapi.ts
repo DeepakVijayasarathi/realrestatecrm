@@ -110,6 +110,14 @@ export const openApiSpec = {
       get: { tags: ["Webhooks"], summary: "Meta Lead Ads webhook verification handshake", responses: { "200": { description: "Echoes hub.challenge" } } },
       post: { tags: ["Webhooks"], summary: "Meta Lead Ads event receiver (HMAC-verified, fetches lead field data from Graph API)", responses: { "200": { description: "Processed" } } },
     },
+    "/whatsapp/webhook/status": {
+      get: { tags: ["Webhooks"], summary: "WhatsApp delivery-status webhook verification handshake (Meta)", responses: { "200": { description: "Echoes hub.challenge" } } },
+      post: {
+        tags: ["Webhooks"],
+        summary: "WhatsApp delivery-status callback — updates WhatsAppLog.status to Delivered/Read/Failed (Meta: HMAC-verified via X-Hub-Signature-256; others: X-Webhook-Secret header)",
+        responses: { "200": { description: "Processed" }, "401": { description: "Bad signature/secret" }, "503": { description: "Webhook not configured" } },
+      },
+    },
     "/leads/{id}": {
       get: { tags: ["Leads"], summary: "Lead detail with notes, timeline, WhatsApp + partner history", security: bearer, parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }], responses: { "200": { description: "OK" } } },
       put: { tags: ["Leads"], summary: "Update lead", security: bearer, parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }], responses: { "200": { description: "OK" } } },

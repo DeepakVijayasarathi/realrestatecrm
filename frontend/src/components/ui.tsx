@@ -104,8 +104,10 @@ const badgeTones: Record<string, string> = {
   PROPERTY_SENT: "bg-indigo-50 text-indigo-700 ring-indigo-200",
   REJECTED: "bg-red-50 text-red-700 ring-red-200",
   CLOSED: "bg-slate-100 text-slate-600 ring-slate-300",
-  SENT: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  // whatsapp message status
+  SENT: "bg-blue-50 text-blue-700 ring-blue-200",
   DELIVERED: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  READ: "bg-green-100 text-green-800 ring-green-300",
   FAILED: "bg-red-50 text-red-700 ring-red-200",
   QUEUED: "bg-amber-50 text-amber-700 ring-amber-200",
 };

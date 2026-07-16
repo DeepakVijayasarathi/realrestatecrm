@@ -12,6 +12,9 @@ export interface WhatsAppSettings {
   msg91WhatsappUrl: string;
   smartpingApiKey: string;
   smartpingCampaignName: string;
+  /** Shared secret for the generic (non-Meta) delivery-status webhook — BSPs like
+   * SmartPing/AiSensy/MSG91 call back with this header instead of Meta's HMAC signature. */
+  statusWebhookSecret: string;
 }
 
 export interface OpenAiSettings {
@@ -56,7 +59,7 @@ export interface IntegrationSettings {
 /** Fields that hold real secrets — masked in API responses, and never overwritten by a
  * PUT that just echoes back the mask (see settings.routes.ts). */
 export const SECRET_FIELDS: { [K in keyof IntegrationSettings]: (keyof IntegrationSettings[K])[] } = {
-  whatsapp: ["accessToken", "msg91AuthKey", "smartpingApiKey"],
+  whatsapp: ["accessToken", "msg91AuthKey", "smartpingApiKey", "statusWebhookSecret"],
   openai: ["apiKey", "geminiApiKey"],
   meta: ["appSecret", "pageAccessToken"],
   websiteSync: ["apiKey", "webhookSecret"],
@@ -78,6 +81,7 @@ export const SECTION_SCHEMAS = {
     msg91WhatsappUrl: z.string(),
     smartpingApiKey: z.string().trim(),
     smartpingCampaignName: z.string().trim(),
+    statusWebhookSecret: z.string(),
   }).partial(),
   openai: z.object({
     provider: z.enum(["openai", "gemini"]),
@@ -128,6 +132,7 @@ function defaults(): IntegrationSettings {
       msg91WhatsappUrl: env.msg91.whatsappUrl,
       smartpingApiKey: env.smartping.apiKey,
       smartpingCampaignName: env.smartping.campaignName,
+      statusWebhookSecret: "",
     },
     openai: {
       provider: (env.openai.provider as OpenAiSettings["provider"]) || "openai",
