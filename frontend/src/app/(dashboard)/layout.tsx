@@ -142,7 +142,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {branding.logoUrl ? (
             // The logo image already carries the name/tagline as artwork — showing our
             // own text next to it would just duplicate (and likely clash with) that.
-            <img src={resolveMediaUrl(branding.logoUrl)} alt={branding.appName} className="h-11 max-w-full object-contain" />
+            // Most logos are exported on a solid white background rather than
+            // transparent, which looks like a stray box floating on this dark sidebar —
+            // wrapping it in its own white card makes that read as an intentional badge.
+            <div className="max-w-full rounded-lg bg-white px-2.5 py-1.5 shadow-sm">
+              <img src={resolveMediaUrl(branding.logoUrl)} alt={branding.appName} className="h-9 max-w-full object-contain" />
+            </div>
           ) : (
             <>
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 font-bold text-white shadow-lg shadow-brand-900/50 ring-1 ring-white/20">
