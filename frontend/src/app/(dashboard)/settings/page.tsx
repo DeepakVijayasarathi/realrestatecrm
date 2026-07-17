@@ -158,7 +158,7 @@ export default function SettingsPage() {
               <Input value={branding.tagline} onChange={(e) => setBranding((b) => ({ ...b, tagline: e.target.value }))} />
             </Field>
             <Field label="Logo">
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 {branding.logoUrl ? (
                   <img src={resolveMediaUrl(branding.logoUrl)} alt="Logo" className="h-12 w-12 rounded-xl object-cover ring-1 ring-slate-200" />
                 ) : (
@@ -182,10 +182,10 @@ export default function SettingsPage() {
               </div>
             </Field>
             <Field label="Primary color">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <input
                   type="color"
-                  value={branding.primaryColor || "#2f4ce0"}
+                  value={branding.primaryColor || "#da6834"}
                   onChange={(e) => setBranding((b) => ({ ...b, primaryColor: e.target.value }))}
                   className="h-9 w-12 shrink-0 cursor-pointer rounded-md border border-slate-200"
                 />

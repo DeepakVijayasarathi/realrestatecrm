@@ -246,10 +246,10 @@ function ConsoleTab() {
                 <div className={`max-w-[80%] rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm shadow-sm ${e.error ? "border border-red-200 bg-red-50 text-red-700" : "border border-slate-200 bg-white text-slate-700"}`}>
                   <p className="whitespace-pre-wrap">{e.text}</p>
                   {!e.error && (
-                    <div className="mt-2 flex items-center gap-2 border-t border-slate-100 pt-1.5">
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-100 pt-1.5">
                       <button
                         type="button"
-                        className="flex items-center gap-1 text-[11px] font-medium text-slate-500 hover:text-brand-600"
+                        className="flex shrink-0 items-center gap-1 text-[11px] font-medium text-slate-500 hover:text-brand-600"
                         onClick={() => copyEntry(i, e.text)}
                       >
                         <CopyIcon className="h-3 w-3" /> {copiedIdx === i ? "Copied!" : "Copy"}
@@ -258,14 +258,14 @@ function ConsoleTab() {
                         <button
                           type="button"
                           disabled={sendingIdx === i}
-                          className="flex items-center gap-1 text-[11px] font-medium text-slate-500 hover:text-brand-600 disabled:opacity-50"
+                          className="flex min-w-0 items-center gap-1 text-[11px] font-medium text-slate-500 hover:text-brand-600 disabled:opacity-50"
                           onClick={() => sendEntryToWhatsApp(i, e)}
                         >
-                          <SendIcon className="h-3 w-3" /> {sendingIdx === i ? "Sending…" : `Send to ${e.leadName}`}
+                          <SendIcon className="h-3 w-3 shrink-0" /> <span className="truncate">{sendingIdx === i ? "Sending…" : `Send to ${e.leadName}`}</span>
                         </button>
                       )}
                       {e.usage && (
-                        <span className="ml-auto text-[11px] text-slate-400">
+                        <span className="ml-auto shrink-0 text-[11px] text-slate-400">
                           {e.usage.totalTokens.toLocaleString()} tokens · {fmtUsd(e.usage.estimatedCostUsd)}
                         </span>
                       )}

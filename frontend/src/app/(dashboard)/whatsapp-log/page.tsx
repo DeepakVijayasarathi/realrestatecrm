@@ -66,7 +66,7 @@ export default function WhatsAppLogPage() {
           <EmptyState message="No WhatsApp messages sent yet." />
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
@@ -99,6 +99,28 @@ export default function WhatsAppLogPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile card list — the wide table above is unusable below md. */}
+            <div className="divide-y divide-slate-100 md:hidden">
+              {result.data.map((log) => (
+                <div key={log.id} className="p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <Link href={`/leads/${log.lead.id}`} className="font-medium text-brand-700 hover:underline">{log.lead.fullName}</Link>
+                      <div className="text-xs text-slate-400">{log.toNumber}</div>
+                    </div>
+                    <Badge value={log.status} />
+                  </div>
+                  <p className="mt-1.5 line-clamp-2 whitespace-pre-wrap text-xs text-slate-500">{log.body}</p>
+                  {log.error && <p className="mt-1 text-xs text-red-600">{log.error}</p>}
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                    <span>{fmtDate(log.createdAt, true)}</span>
+                    <span>{log.sentBy.name}</span>
+                    {log.template && <span>{log.template.name}</span>}
+                  </div>
+                </div>
+              ))}
             </div>
             <Pagination page={result.page} pageSize={result.pageSize} total={result.total} onPage={setPage} />
           </>
