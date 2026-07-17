@@ -1,7 +1,8 @@
-import { Lead, NotificationType, PipelineStage } from "@prisma/client";
+import { ActivityType, Lead, NotificationType, PipelineStage } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { renderTemplate, sendWhatsApp } from "./whatsapp.service";
 import { notify } from "./notification.service";
+import { logActivity } from "./activity.service";
 
 type Agent = { id: string; name: string } | null;
 
@@ -68,6 +69,20 @@ export async function runStageAutomation(lead: Lead, toStage: PipelineStage, age
         meta: { leadId: lead.id },
       });
     }
+
+    // This send previously only showed up in the WhatsApp tab — not the Activity
+    // timeline — leaving the "why did the client get this?" trail incomplete. Actor is
+    // null (not the agent) so the timeline reads "System" and isn't misattributed to
+    // whoever happened to change the stage.
+    await logActivity(
+      lead.id,
+      null,
+      ActivityType.WHATSAPP_SENT,
+      result.status === "FAILED"
+        ? `Automated WhatsApp "${template.name}" failed to send`
+        : `Automated WhatsApp "${template.name}" sent`,
+      { templateKey, status: result.status }
+    );
   } catch (err) {
     console.error(`[pipelineAutomation] stage trigger failed for lead ${lead.id} → ${toStage}:`, err instanceof Error ? err.message : err);
   }

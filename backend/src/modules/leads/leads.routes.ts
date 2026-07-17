@@ -961,10 +961,23 @@ router.post("/:id/send-whatsapp", validate(sendWhatsAppSchema), async (req, res,
       }
     }
 
+    // Previously always said "sent" regardless of outcome, and never named the
+    // properties/template — so a failed send read as a success and you had to switch to
+    // the WhatsApp tab just to know what was actually said.
+    const propertyNames = properties.map((p) => p.title);
+    const propertySummary = propertyNames.length
+      ? propertyNames.length <= 2
+        ? propertyNames.join(" & ")
+        : `${propertyNames.slice(0, 2).join(", ")} +${propertyNames.length - 2} more`
+      : null;
+    const activityMessage = [
+      `WhatsApp ${result.status === "FAILED" ? "failed" : "sent"}`,
+      template ? `(${template.name})` : null,
+      propertySummary ? `— ${propertySummary}` : null,
+    ].filter(Boolean).join(" ");
+
     await logActivity(lead.id, req.user!.id, ActivityType.WHATSAPP_SENT,
-      properties.length
-        ? `WhatsApp sent with ${properties.length} propert${properties.length === 1 ? "y" : "ies"}`
-        : "WhatsApp message sent",
+      activityMessage,
       { propertyIds, status: result.status });
 
     if (result.status === "FAILED") {

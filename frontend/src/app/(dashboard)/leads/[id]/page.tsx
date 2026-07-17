@@ -18,7 +18,7 @@ import { useToast } from "@/components/toast";
 
 interface LeadDetail extends Lead {
   notes: { id: string; body: string; createdAt: string; author: { name: string } }[];
-  activities: { id: string; type: string; message: string; createdAt: string; actor?: { name: string } | null }[];
+  activities: { id: string; type: string; message: string; createdAt: string; actor?: { name: string } | null; meta?: { status?: string } | null }[];
   pipelineHistory: { id: string; fromStage?: string | null; toStage: string; createdAt: string; changedBy?: { name: string } | null }[];
   whatsappLogs: { id: string; body: string; status: string; toNumber: string; createdAt: string; sentBy: { name: string }; template?: { name: string } | null; propertyIds: string[] }[];
   partnerShares: { id: string; status: string; createdAt: string; notesShared?: string | null; partner: { id: string; name: string }; sharedBy: { name: string } }[];
@@ -390,15 +390,18 @@ export default function LeadDetailPage() {
             <div className="max-h-96 overflow-y-auto p-4">
               {tab === "timeline" && (
                 <ol className="space-y-3">
-                  {lead.activities.map((a) => (
-                    <li key={a.id} className="flex gap-3 text-sm">
-                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand-500" />
-                      <div>
-                        <p className="text-slate-700">{a.message}</p>
-                        <p className="text-xs text-slate-400">{a.actor?.name ?? "System"} · {fmtDate(a.createdAt, true)}</p>
-                      </div>
-                    </li>
-                  ))}
+                  {lead.activities.map((a) => {
+                    const failed = a.meta?.status === "FAILED";
+                    return (
+                      <li key={a.id} className="flex gap-3 text-sm">
+                        <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${failed ? "bg-red-500" : "bg-brand-500"}`} />
+                        <div>
+                          <p className={failed ? "text-red-700" : "text-slate-700"}>{a.message}</p>
+                          <p className="text-xs text-slate-400">{a.actor?.name ?? "System"} · {fmtDate(a.createdAt, true)}</p>
+                        </div>
+                      </li>
+                    );
+                  })}
                   {lead.activities.length === 0 && <p className="text-sm text-slate-400">No activity yet.</p>}
                 </ol>
               )}
