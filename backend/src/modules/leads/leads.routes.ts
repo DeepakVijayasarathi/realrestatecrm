@@ -814,7 +814,7 @@ router.post("/:id/shortlist", validate(shortlistSchema), async (req, res, next) 
 // altering property details. Logged as AI usage same as the console features; falls
 // back to the original English text if the AI call fails so a translation hiccup never
 // blocks the actual send.
-async function translateForWhatsApp(text: string, language: string, userId: string): Promise<string> {
+async function translateForWhatsApp(text: string, language: string, userId: string): Promise<{ text: string; failed: boolean }> {
   try {
     const { text: translated, usage, model } = await askAI([
       {
@@ -836,10 +836,13 @@ async function translateForWhatsApp(text: string, language: string, userId: stri
         },
       })
       .catch((err) => console.error("[ai] failed to log usage:", err));
-    return translated;
+    return { text: translated, failed: false };
   } catch (err) {
+    // Never block the send over a translation hiccup — but the caller still needs to
+    // know the message went out in English instead of the requested language, since
+    // silently mismatching what the agent picked was itself the source of confusion.
     console.error("[whatsapp] translation failed, sending original text:", err);
-    return text;
+    return { text, failed: true };
   }
 }
 
@@ -897,8 +900,11 @@ router.post("/:id/send-whatsapp", validate(sendWhatsAppSchema), async (req, res,
       throw badRequest("Provide propertyIds, a templateKey, or a customMessage");
     }
 
+    let translationFailed = false;
     if (language && language !== "English") {
-      body = await translateForWhatsApp(body, language, req.user!.id);
+      const translated = await translateForWhatsApp(body, language, req.user!.id);
+      body = translated.text;
+      translationFailed = translated.failed;
     }
 
     const result = await sendWhatsApp(toNumber, body, lead.fullName, primaryImageUrl);
@@ -983,6 +989,9 @@ router.post("/:id/send-whatsapp", validate(sendWhatsAppSchema), async (req, res,
 
     if (result.status === "FAILED") {
       return res.status(502).json({ data: log, message: `WhatsApp send failed: ${result.error ?? "provider error"}` });
+    }
+    if (translationFailed) {
+      return res.status(201).json({ data: log, message: `Sent, but translation to ${language} failed — the message went out in English instead.` });
     }
     res.status(201).json({ data: log });
   } catch (err) {

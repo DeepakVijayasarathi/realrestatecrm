@@ -52,9 +52,9 @@ function PropertyDetailContent() {
     setSending(true);
     setSendError(null);
     try {
-      await api.post(`/leads/${leadId}/send-whatsapp`, { propertyIds: [property.id], language });
+      const res = await api.post<{ message?: string }>(`/leads/${leadId}/send-whatsapp`, { propertyIds: [property.id], language });
       const lead = leads.find((l) => l.id === leadId);
-      toast(`Sent "${property.title}" to ${lead?.fullName ?? "client"} on WhatsApp`);
+      toast(res.message ?? `Sent "${property.title}" to ${lead?.fullName ?? "client"} on WhatsApp`);
       setShowSend(false);
       setLeadId("");
       setLeadQuery("");

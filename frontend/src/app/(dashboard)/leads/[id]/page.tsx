@@ -142,16 +142,25 @@ export default function LeadDetailPage() {
       return setActionError("Choose a template or select at least one property");
     }
     setSending(true);
-    await act(
-      () => api.post(`/leads/${id}/send-whatsapp`, {
+    setActionError(null);
+    try {
+      // Inspected directly (not via act()) because a translation-failure warning rides
+      // along in the response body even on a 2xx — a plain success toast would hide it.
+      const res = await api.post<{ message?: string }>(`/leads/${id}/send-whatsapp`, {
         propertyIds: [...selected],
         templateKey: sendMode === "template" ? (templateKey || undefined) : undefined,
         customMessage: sendMode === "custom" ? customMessage.trim() || undefined : undefined,
         language: whatsAppLanguage,
-      }),
-      () => { setSelected(new Set()); setCustomMessage(""); setShowSendModal(false); setTab("whatsapp"); },
-      `WhatsApp message sent to ${lead?.whatsappNumber || lead?.mobile || "the lead"}`
-    );
+      });
+      load();
+      setSelected(new Set());
+      setCustomMessage("");
+      setShowSendModal(false);
+      setTab("whatsapp");
+      toast(res.message ?? `WhatsApp message sent to ${lead?.whatsappNumber || lead?.mobile || "the lead"}`);
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Action failed");
+    }
     setSending(false);
   }
 
