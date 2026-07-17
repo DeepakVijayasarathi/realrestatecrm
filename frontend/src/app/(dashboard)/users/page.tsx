@@ -78,7 +78,7 @@ export default function UsersPage() {
       />
       <ErrorBanner message={error} />
       <Card>
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
@@ -116,6 +116,34 @@ export default function UsersPage() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile card list — the wide table above is unusable below md. */}
+        <div className="divide-y divide-slate-100 md:hidden">
+          {users.map((u) => (
+            <div key={u.id} className="p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-medium">{u.name}</div>
+                  <div className="truncate text-xs text-slate-500">{u.email}</div>
+                </div>
+                <Badge value={u.isActive ? "ACTIVE" : "INACTIVE"} />
+              </div>
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                <Badge value={u.role} />
+                {u.partnerCompany && <span>{u.partnerCompany.name}</span>}
+                <span>Joined {fmtDate(u.createdAt)}</span>
+              </div>
+              <div className="mt-2 flex justify-end gap-2">
+                <Button variant="secondary" size="sm" onClick={() => openForm(u)}>Edit</Button>
+                {u.id !== me?.id && (
+                  <Button variant={u.isActive ? "danger" : "secondary"} size="sm" onClick={() => toggleActive(u)}>
+                    {u.isActive ? "Deactivate" : "Activate"}
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </Card>
 

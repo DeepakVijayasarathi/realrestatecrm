@@ -6,28 +6,64 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { api, resolveMediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import PropertyForm from "@/components/PropertyForm";
-import { Badge, Button, Card, ConfirmDialog, ErrorBanner, Spinner } from "@/components/ui";
+import { Badge, Button, Card, ConfirmDialog, ErrorBanner, Field, Input, Modal, Select, Spinner } from "@/components/ui";
 import { useToast } from "@/components/toast";
-import { Property, fmtDate, fmtMoney, labelize } from "@/lib/types";
-import { BuildingIcon, MapPinIcon, VideoIcon } from "@/components/icons";
+import { AI_LANGUAGES, Lead, Property, fmtDate, fmtMoney, labelize } from "@/lib/types";
+import { BuildingIcon, MapPinIcon, SendIcon, VideoIcon } from "@/components/icons";
 import { youtubeEmbedUrl } from "@/lib/youtube";
 
 function PropertyDetailContent() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { hasRole } = useAuth();
+  const { user, hasRole } = useAuth();
   const canEdit = hasRole("PROPERTY_STAFF", "SALES_MANAGER");
+  const canSend = user?.role !== "PARTNER_USER";
   const toast = useToast();
   const [property, setProperty] = useState<Property | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(searchParams.get("uploadError"));
   const [editing, setEditing] = useState(searchParams.get("edit") === "true");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [showSend, setShowSend] = useState(false);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [leadQuery, setLeadQuery] = useState("");
+  const [leadId, setLeadId] = useState("");
+  const [language, setLanguage] = useState<(typeof AI_LANGUAGES)[number]["value"]>("English");
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   useEffect(() => {
     api.get<{ data: Property }>(`/properties/${id}`).then((r) => setProperty(r.data)).catch((e) => setError(e.message));
   }, [id, editing]);
+
+  useEffect(() => {
+    if (!showSend) return;
+    const t = setTimeout(() => {
+      api.get<{ data: Lead[] }>(`/leads${leadQuery ? `?q=${encodeURIComponent(leadQuery)}` : "?pageSize=25"}`)
+        .then((r) => setLeads(r.data))
+        .catch(() => {});
+    }, leadQuery ? 300 : 0);
+    return () => clearTimeout(t);
+  }, [showSend, leadQuery]);
+
+  async function sendToLead() {
+    if (!leadId || !property) return;
+    setSending(true);
+    setSendError(null);
+    try {
+      await api.post(`/leads/${leadId}/send-whatsapp`, { propertyIds: [property.id], language });
+      const lead = leads.find((l) => l.id === leadId);
+      toast(`Sent "${property.title}" to ${lead?.fullName ?? "client"} on WhatsApp`);
+      setShowSend(false);
+      setLeadId("");
+      setLeadQuery("");
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : "Send failed");
+    } finally {
+      setSending(false);
+    }
+  }
 
   async function remove() {
     try {
@@ -71,13 +107,47 @@ function PropertyDetailContent() {
             {property.location} · {labelize(property.type)} · {labelize(property.category)}
           </div>
         </div>
-        {canEdit && (
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>
-            <Button variant="danger" onClick={() => setConfirmingDelete(true)}>Delete</Button>
-          </div>
-        )}
+        <div className="flex gap-2">
+          {canSend && (
+            <Button onClick={() => setShowSend(true)}>
+              <SendIcon className="mr-1.5 inline h-3.5 w-3.5" />Share via WhatsApp
+            </Button>
+          )}
+          {canEdit && (
+            <>
+              <Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>
+              <Button variant="danger" onClick={() => setConfirmingDelete(true)}>Delete</Button>
+            </>
+          )}
+        </div>
       </div>
+
+      <Modal open={showSend} onClose={() => setShowSend(false)} title="Share via WhatsApp">
+        <div className="space-y-4">
+          <p className="text-xs text-slate-500">Sends &ldquo;{property.title}&rdquo; to a lead&apos;s WhatsApp, same as sending from their profile.</p>
+          <Field label="Client">
+            <Input placeholder="Search leads by name / phone…" value={leadQuery} onChange={(e) => { setLeadQuery(e.target.value); setLeadId(""); }} />
+            {leads.length > 0 && (
+              <Select className="mt-2" value={leadId} onChange={(e) => setLeadId(e.target.value)}>
+                <option value="">Select a lead…</option>
+                {leads.map((l) => <option key={l.id} value={l.id}>{l.fullName} — {l.mobile}</option>)}
+              </Select>
+            )}
+          </Field>
+          <Field label="Language">
+            <Select value={language} onChange={(e) => setLanguage(e.target.value as (typeof AI_LANGUAGES)[number]["value"])}>
+              {AI_LANGUAGES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
+            </Select>
+          </Field>
+          <ErrorBanner message={sendError} />
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setShowSend(false)}>Cancel</Button>
+            <Button onClick={sendToLead} disabled={!leadId || sending}>
+              {sending ? "Sending…" : <><SendIcon className="mr-1.5 inline h-3.5 w-3.5" />Send</>}
+            </Button>
+          </div>
+        </div>
+      </Modal>
       <ConfirmDialog
         open={confirmingDelete}
         title="Delete property"
