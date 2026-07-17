@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { api } from "@/lib/api";
+import { api, resolveMediaUrl } from "@/lib/api";
 import { Button, Card, ErrorBanner, Field, Input } from "@/components/ui";
+
+const BRANDING_DEFAULTS = { appName: "Thanjai Property", tagline: "Real Estate · Since 2009", logoUrl: null as string | null };
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -15,6 +17,14 @@ export default function LoginPage() {
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [forgotMode, setForgotMode] = useState(false);
+  const [branding, setBranding] = useState(BRANDING_DEFAULTS);
+
+  useEffect(() => {
+    api
+      .get<{ data: Partial<typeof BRANDING_DEFAULTS> }>("/settings/branding/public")
+      .then((r) => setBranding({ ...BRANDING_DEFAULTS, ...r.data }))
+      .catch(() => {});
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -45,11 +55,17 @@ export default function LoginPage() {
       </div>
       <Card className="relative w-full max-w-md p-8 shadow-pop ring-1 ring-white/10">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-2xl font-bold text-white shadow-lg shadow-brand-600/30 ring-1 ring-white/20">
-            T
-          </div>
-          <h1 className="text-xl font-semibold tracking-tight">Thanjai Property</h1>
-          <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-gold-600">Real Estate · Since 2009</p>
+          {branding.logoUrl ? (
+            <img src={resolveMediaUrl(branding.logoUrl)} alt={branding.appName} className="mx-auto mb-4 h-14 max-w-full object-contain" />
+          ) : (
+            <>
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-2xl font-bold text-white shadow-lg shadow-brand-600/30 ring-1 ring-white/20">
+                {branding.appName.charAt(0).toUpperCase()}
+              </div>
+              <h1 className="text-xl font-semibold tracking-tight">{branding.appName}</h1>
+              <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-gold-600">{branding.tagline}</p>
+            </>
+          )}
           <p className="mt-3 text-sm text-slate-500">
             {forgotMode ? "Enter your email to receive a reset link" : "Sign in to your workspace"}
           </p>

@@ -140,16 +140,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       >
         <div className="flex h-16 items-center gap-2.5 border-b border-white/10 px-4">
           {branding.logoUrl ? (
-            <img src={resolveMediaUrl(branding.logoUrl)} alt={branding.appName} className="h-9 w-9 shrink-0 rounded-xl object-cover ring-1 ring-white/20" />
+            // The logo image already carries the name/tagline as artwork — showing our
+            // own text next to it would just duplicate (and likely clash with) that.
+            <img src={resolveMediaUrl(branding.logoUrl)} alt={branding.appName} className="h-11 max-w-full object-contain" />
           ) : (
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 font-bold text-white shadow-lg shadow-brand-900/50 ring-1 ring-white/20">
-              {branding.appName.charAt(0).toUpperCase()}
-            </div>
+            <>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 font-bold text-white shadow-lg shadow-brand-900/50 ring-1 ring-white/20">
+                {branding.appName.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0 leading-tight">
+                <div className="truncate font-semibold tracking-tight text-white">{branding.appName}</div>
+                <div className="truncate text-[10px] font-medium uppercase tracking-[0.18em] text-gold-400">{branding.tagline}</div>
+              </div>
+            </>
           )}
-          <div className="min-w-0 leading-tight">
-            <div className="truncate font-semibold tracking-tight text-white">{branding.appName}</div>
-            <div className="truncate text-[10px] font-medium uppercase tracking-[0.18em] text-gold-400">{branding.tagline}</div>
-          </div>
         </div>
         <nav className="flex-1 space-y-4 overflow-y-auto p-3">
           {visibleSections.map((section) => (

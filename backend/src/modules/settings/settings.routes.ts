@@ -18,6 +18,19 @@ import {
 } from "../../services/integrationSettings.service";
 
 const router = Router();
+
+// Branding (app name/tagline/logo/color) needs to render on the login screen too, before
+// anyone has a token — registered ahead of requireAuth below so it's the one settings
+// route that's reachable unauthenticated. Nothing sensitive lives under this key.
+router.get("/branding/public", async (_req, res, next) => {
+  try {
+    const setting = await prisma.setting.findUnique({ where: { key: "branding" } });
+    res.json({ data: setting?.value ?? {} });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.use(requireAuth);
 
 // Key-value settings store (currencies, notification prefs, etc.)
