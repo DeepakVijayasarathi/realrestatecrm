@@ -10,6 +10,7 @@ import { toCsv } from "../../lib/csv";
 import { audit } from "../../services/audit.service";
 import { getIntegrationSettings } from "../../services/integrationSettings.service";
 import { verifyMetaSignature } from "../../lib/webhookAuth";
+import { sendWhatsApp } from "../../services/whatsapp.service";
 
 const router = Router();
 
@@ -87,6 +88,87 @@ function extractStatusEvents(body: unknown): StatusEvent[] {
   return events;
 }
 
+interface InboundEvent { id?: string; from: string; body: string }
+
+/** Same defensive-parsing approach as extractStatusEvents — Meta nests inbound messages
+ * under entry[].changes[].value.messages[], everyone else tends to post something flatter.
+ * The exact shape a BSP other than Meta actually uses here is unconfirmed (no account with
+ * inbound webhooks enabled to test against yet), so this accepts a handful of the most
+ * common field-name variants rather than committing to one. */
+function extractInboundEvents(body: unknown): InboundEvent[] {
+  const events: InboundEvent[] = [];
+  const b = body as Record<string, unknown> | null;
+  const entries = Array.isArray(b?.entry) ? (b!.entry as Record<string, unknown>[]) : [];
+  for (const entry of entries) {
+    const changes = Array.isArray(entry.changes) ? (entry.changes as Record<string, unknown>[]) : [];
+    for (const change of changes) {
+      const value = change.value as Record<string, unknown> | undefined;
+      const messages = Array.isArray(value?.messages) ? (value!.messages as Record<string, unknown>[]) : [];
+      for (const m of messages) {
+        const from = m.from as string | undefined;
+        const text = (m.text as { body?: string } | undefined)?.body;
+        if (from && text) events.push({ id: m.id as string | undefined, from, body: text });
+      }
+    }
+  }
+  if (events.length) return events;
+
+  const flat = Array.isArray(b?.messages) ? (b!.messages as unknown[]) : Array.isArray(body) ? (body as unknown[]) : [body];
+  for (const item of flat) {
+    const o = item as Record<string, unknown> | null;
+    const from = (o?.from ?? o?.sender ?? o?.mobile ?? o?.waId ?? o?.wa_id) as string | undefined;
+    const text = (o?.text ?? o?.body ?? o?.message) as string | undefined;
+    if (typeof from === "string" && typeof text === "string") {
+      events.push({ id: (o?.id ?? o?.messageId) as string | undefined, from, body: text });
+    }
+  }
+  return events;
+}
+
+/** Last-10-digits match so "+919150349580", "919150349580", and "9150349580" all match
+ * the same lead regardless of which format a BSP's webhook happens to send the sender in. */
+function normalizePhone(raw: string): string {
+  return raw.replace(/\D/g, "").slice(-10);
+}
+
+const AUTO_REPLY_BODY =
+  "Hi! Thanks for reaching out to Thanjai Property.\nWe've received your message and our team will get back to you shortly.";
+
+async function handleInboundMessages(events: InboundEvent[]) {
+  if (!events.length) return;
+  // Small lead volume for now — matching in JS after one bulk fetch is simpler and just
+  // as correct as a fuzzy SQL match, and cheap at this scale.
+  const leads = await prisma.lead.findMany({ select: { id: true, mobile: true, whatsappNumber: true, assignedToId: true, createdById: true } });
+  for (const e of events) {
+    const fromNorm = normalizePhone(e.from);
+    const lead = leads.find((l) => normalizePhone(l.whatsappNumber || l.mobile) === fromNorm);
+    const inbound = await prisma.whatsAppInboundMessage.create({
+      data: { leadId: lead?.id, fromNumber: e.from, body: e.body, providerMessageId: e.id },
+    });
+    // Only auto-reply (and only log it) when the sender matches a known lead — an
+    // unmatched number gets recorded for visibility but no automated response, since we
+    // don't know who they are yet.
+    const sentById = lead?.assignedToId ?? lead?.createdById;
+    if (lead && sentById) {
+      const result = await sendWhatsApp(e.from, AUTO_REPLY_BODY, undefined);
+      await prisma.whatsAppLog.create({
+        data: {
+          leadId: lead.id,
+          toNumber: e.from,
+          body: AUTO_REPLY_BODY,
+          sentById,
+          status: result.status,
+          providerMessageId: result.providerMessageId,
+          error: result.error,
+        },
+      });
+      if (result.status !== "FAILED") {
+        await prisma.whatsAppInboundMessage.update({ where: { id: inbound.id }, data: { autoRepliedAt: new Date() } });
+      }
+    }
+  }
+}
+
 router.post("/webhook/status", async (req, res, next) => {
   try {
     const settings = await getIntegrationSettings();
@@ -113,6 +195,11 @@ router.post("/webhook/status", async (req, res, next) => {
         });
       })
     );
+
+    // Same webhook URL carries both event types (this is how Meta Cloud API already
+    // works — one callback, differentiated by which field is present in the payload) so
+    // there's only ever one URL/secret to hand a provider, not two.
+    await handleInboundMessages(extractInboundEvents(req.body));
     res.sendStatus(200);
   } catch (err) {
     next(err);

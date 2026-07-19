@@ -21,6 +21,7 @@ interface LeadDetail extends Lead {
   activities: { id: string; type: string; message: string; createdAt: string; actor?: { name: string } | null; meta?: { status?: string } | null }[];
   pipelineHistory: { id: string; fromStage?: string | null; toStage: string; createdAt: string; changedBy?: { name: string } | null }[];
   whatsappLogs: { id: string; body: string; status: string; toNumber: string; createdAt: string; sentBy: { name: string }; template?: { name: string } | null; propertyIds: string[] }[];
+  inboundMessages: { id: string; body: string; fromNumber: string; createdAt: string; autoRepliedAt?: string | null }[];
   partnerShares: { id: string; status: string; createdAt: string; notesShared?: string | null; partner: { id: string; name: string }; sharedBy: { name: string } }[];
   shortlist: { id: string; score: number; sharedViaWhatsApp: boolean; property: Property }[];
 }
@@ -211,6 +212,13 @@ export default function LeadDetailPage() {
     }));
   const manualResults = (searchResults ?? []).filter((m) => !autoMatches.some((x) => x.property.id === m.property.id));
   const propertyList = [...manualResults, ...autoMatches];
+
+  // One chronological thread instead of two disconnected lists — otherwise there was no
+  // way to see a client's reply next to what prompted it.
+  const conversation = [
+    ...lead.whatsappLogs.map((w) => ({ direction: "out" as const, id: w.id, body: w.body, createdAt: w.createdAt, meta: w })),
+    ...lead.inboundMessages.map((m) => ({ direction: "in" as const, id: m.id, body: m.body, createdAt: m.createdAt, meta: m })),
+  ].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
   const info: [string, React.ReactNode][] = [
     ["Mobile", lead.mobile],
@@ -440,7 +448,7 @@ export default function LeadDetailPage() {
             <div className="flex overflow-x-auto border-b border-slate-200">
               {(isPartner
                 ? ([["partners", `Partner shares (${lead.partnerShares.length})`]] as const)
-                : ([["timeline", "Activity timeline"], ["whatsapp", `WhatsApp (${lead.whatsappLogs.length})`], ["partners", `Partner shares (${lead.partnerShares.length})`], ["pipeline", "Pipeline history"]] as const)
+                : ([["timeline", "Activity timeline"], ["whatsapp", `WhatsApp (${conversation.length})`], ["partners", `Partner shares (${lead.partnerShares.length})`], ["pipeline", "Pipeline history"]] as const)
               ).map(([key, label]) => (
                 <button
                   key={key}
@@ -471,19 +479,29 @@ export default function LeadDetailPage() {
               )}
               {tab === "whatsapp" && (
                 <div className="space-y-3">
-                  {lead.whatsappLogs.map((w) => (
-                    <div key={w.id} className="rounded-lg border border-slate-200 p-3">
-                      <div className="mb-1 flex items-center justify-between">
-                        <span className="text-xs text-slate-500">
-                          To {w.toNumber} · by {w.sentBy.name} · {fmtDate(w.createdAt, true)}
-                          {w.template && ` · template: ${w.template.name}`}
-                        </span>
-                        <span className="flex items-center gap-1 text-xs text-slate-400">Delivery: <Badge value={w.status} /></span>
+                  {conversation.map((entry) =>
+                    entry.direction === "out" ? (
+                      <div key={entry.id} className="ml-auto max-w-[85%] rounded-lg rounded-tr-sm border border-brand-100 bg-brand-50 p-3">
+                        <div className="mb-1 flex items-center justify-between gap-2">
+                          <span className="text-xs text-slate-500">
+                            by {entry.meta.sentBy.name} · {fmtDate(entry.createdAt, true)}
+                            {entry.meta.template && ` · template: ${entry.meta.template.name}`}
+                          </span>
+                          <span className="flex shrink-0 items-center gap-1 text-xs text-slate-400">Delivery: <Badge value={entry.meta.status} /></span>
+                        </div>
+                        <p className="whitespace-pre-wrap text-sm text-slate-700">{entry.body}</p>
                       </div>
-                      <p className="whitespace-pre-wrap text-sm text-slate-700">{w.body}</p>
-                    </div>
-                  ))}
-                  {lead.whatsappLogs.length === 0 && <p className="text-sm text-slate-400">No WhatsApp messages yet.</p>}
+                    ) : (
+                      <div key={entry.id} className="mr-auto max-w-[85%] rounded-lg rounded-tl-sm border border-slate-200 bg-white p-3">
+                        <div className="mb-1 text-xs text-slate-500">
+                          From {entry.meta.fromNumber} · {fmtDate(entry.createdAt, true)}
+                          {entry.meta.autoRepliedAt && " · auto-replied"}
+                        </div>
+                        <p className="whitespace-pre-wrap text-sm text-slate-700">{entry.body}</p>
+                      </div>
+                    )
+                  )}
+                  {conversation.length === 0 && <p className="text-sm text-slate-400">No WhatsApp messages yet.</p>}
                 </div>
               )}
               {tab === "partners" && (

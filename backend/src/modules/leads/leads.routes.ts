@@ -544,13 +544,14 @@ router.get("/:id", async (req, res, next) => {
           activities: [],
           pipelineHistory: [],
           whatsappLogs: [],
+          inboundMessages: [],
           partnerShares,
           shortlist: [],
         },
       });
     }
 
-    const [notes, activities, pipelineHistory, whatsappLogs, partnerShares, matches] = await Promise.all([
+    const [notes, activities, pipelineHistory, whatsappLogs, inboundMessages, partnerShares, matches] = await Promise.all([
       prisma.leadNote.findMany({
         where: { leadId: lead.id },
         include: { author: { select: { name: true } } },
@@ -572,6 +573,10 @@ router.get("/:id", async (req, res, next) => {
         include: { sentBy: { select: { name: true } }, template: { select: { name: true } } },
         orderBy: { createdAt: "desc" },
       }),
+      prisma.whatsAppInboundMessage.findMany({
+        where: { leadId: lead.id },
+        orderBy: { createdAt: "desc" },
+      }),
       prisma.partnerLeadShare.findMany({
         where: { leadId: lead.id },
         include: { partner: { select: { id: true, name: true } }, sharedBy: { select: { name: true } } },
@@ -583,7 +588,7 @@ router.get("/:id", async (req, res, next) => {
         orderBy: { score: "desc" },
       }),
     ]);
-    res.json({ data: { ...lead, notes, activities, pipelineHistory, whatsappLogs, partnerShares, shortlist: matches } });
+    res.json({ data: { ...lead, notes, activities, pipelineHistory, whatsappLogs, inboundMessages, partnerShares, shortlist: matches } });
   } catch (err) {
     next(err);
   }

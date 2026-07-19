@@ -261,6 +261,7 @@ model Lead {
   pipelineHistory PipelineHistory[]
   matches         PropertyMatch[]
   whatsappLogs    WhatsAppLog[]
+  inboundMessages WhatsAppInboundMessage[]
   partnerShares   PartnerLeadShare[]
 
   @@index([source])
@@ -434,6 +435,24 @@ model WhatsAppLog {
 
   @@index([leadId])
   @@index([sentById])
+  @@index([createdAt])
+}
+
+// A message a client sent TO the business number — the mirror of WhatsAppLog (which is
+// always outbound). leadId is nullable since an inbound message might come from a number
+// that doesn't match any existing lead yet.
+model WhatsAppInboundMessage {
+  id                String    @id @default(cuid())
+  lead              Lead?     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId            String?
+  fromNumber        String
+  body              String
+  providerMessageId String?
+  autoRepliedAt     DateTime?
+  createdAt         DateTime  @default(now())
+
+  @@index([leadId])
+  @@index([fromNumber])
   @@index([createdAt])
 }
 
