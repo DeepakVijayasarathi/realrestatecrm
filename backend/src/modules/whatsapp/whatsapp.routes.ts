@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { Router } from "express";
 import { z } from "zod";
-import { MessageStatus, Role } from "@prisma/client";
+import { MessageStatus, NotificationType, Role } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { requireAuth, requireRole } from "../../middleware/auth";
 import { validate } from "../../middleware/validate";
@@ -11,6 +11,7 @@ import { audit } from "../../services/audit.service";
 import { getIntegrationSettings } from "../../services/integrationSettings.service";
 import { verifyMetaSignature } from "../../lib/webhookAuth";
 import { sendWhatsApp } from "../../services/whatsapp.service";
+import { notify } from "../../services/notification.service";
 
 const router = Router();
 
@@ -138,18 +139,43 @@ async function handleInboundMessages(events: InboundEvent[]) {
   if (!events.length) return;
   // Small lead volume for now — matching in JS after one bulk fetch is simpler and just
   // as correct as a fuzzy SQL match, and cheap at this scale.
-  const leads = await prisma.lead.findMany({ select: { id: true, mobile: true, whatsappNumber: true, assignedToId: true, createdById: true } });
+  const leads = await prisma.lead.findMany({ select: { id: true, fullName: true, mobile: true, whatsappNumber: true, assignedToId: true, createdById: true } });
   for (const e of events) {
     const fromNorm = normalizePhone(e.from);
     const lead = leads.find((l) => normalizePhone(l.whatsappNumber || l.mobile) === fromNorm);
     const inbound = await prisma.whatsAppInboundMessage.create({
       data: { leadId: lead?.id, fromNumber: e.from, body: e.body, providerMessageId: e.id },
     });
-    // Only auto-reply (and only log it) when the sender matches a known lead — an
-    // unmatched number gets recorded for visibility but no automated response, since we
-    // don't know who they are yet.
-    const sentById = lead?.assignedToId ?? lead?.createdById;
-    if (lead && sentById) {
+    if (!lead) continue; // unmatched number — recorded above for visibility, nothing else to do
+
+    // The auto-reply told the client "our team will get back to you shortly" — this is
+    // what actually makes that true. Without it, a reply just sat in the DB until
+    // whichever staff member happened to open that lead's page next.
+    if (lead.assignedToId) {
+      await notify({
+        userId: lead.assignedToId,
+        type: NotificationType.GENERAL,
+        title: `New WhatsApp reply from ${lead.fullName}`,
+        body: e.body.slice(0, 200),
+        meta: { leadId: lead.id },
+      });
+    } else {
+      const managers = await prisma.user.findMany({ where: { role: { in: [Role.SALES_MANAGER, Role.SUPER_ADMIN] }, isActive: true } });
+      await Promise.all(
+        managers.map((m) =>
+          notify({
+            userId: m.id,
+            type: NotificationType.GENERAL,
+            title: `New WhatsApp reply from ${lead.fullName} (unassigned)`,
+            body: e.body.slice(0, 200),
+            meta: { leadId: lead.id },
+          })
+        )
+      );
+    }
+
+    const sentById = lead.assignedToId ?? lead.createdById;
+    if (sentById) {
       const result = await sendWhatsApp(e.from, AUTO_REPLY_BODY, undefined);
       await prisma.whatsAppLog.create({
         data: {
