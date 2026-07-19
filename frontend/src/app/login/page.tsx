@@ -91,29 +91,6 @@ export default function LoginPage() {
         >
           {forgotMode ? "← Back to login" : "Forgot password?"}
         </button>
-        <div className="mt-6 rounded-lg bg-slate-50 p-3 text-xs text-slate-500">
-          <p className="mb-2 text-center font-medium text-slate-600">Demo logins (password: Admin@1234) — click to fill</p>
-          <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-            {[
-              ["Super Admin", "admin@realrest.example"],
-              ["Sales Manager", "manager@realrest.example"],
-              ["Sales Executive", "kavitha@realrest.example"],
-              ["Sales Executive", "arun@realrest.example"],
-              ["Property Staff", "priya@realrest.example"],
-              ["Partner User", "senthil@chennaiprime.example"],
-            ].map(([role, demoEmail]) => (
-              <button
-                key={demoEmail}
-                type="button"
-                className="rounded-md px-2 py-1 text-left transition hover:bg-brand-50 hover:text-brand-700"
-                onClick={() => { setEmail(demoEmail); setPassword("Admin@1234"); setForgotMode(false); setError(null); setInfo(null); }}
-              >
-                <span className="font-medium text-slate-600">{role}</span>
-                <span className="block truncate text-[11px] text-slate-400">{demoEmail}</span>
-              </button>
-            ))}
-          </div>
-        </div>
       </Card>
     </div>
   );
