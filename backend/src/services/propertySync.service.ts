@@ -1,5 +1,8 @@
-import { Property } from "@prisma/client";
+import { Property, PropertyImage } from "@prisma/client";
 import { getIntegrationSettings } from "./integrationSettings.service";
+import { resolveMediaUrl } from "../lib/media";
+
+type PropertyWithImages = Property & { images?: PropertyImage[] };
 
 export type SyncAction = "created" | "updated" | "deleted";
 
@@ -12,7 +15,7 @@ export type SyncAction = "created" | "updated" | "deleted";
  * (rather than calling out) when it isn't configured in Settings → Integrations, so
  * this is safe to leave wired up in every environment including local dev.
  */
-export async function pushPropertyToWebsite(property: Property, action: SyncAction): Promise<void> {
+export async function pushPropertyToWebsite(property: PropertyWithImages, action: SyncAction): Promise<void> {
   const settings = (await getIntegrationSettings()).websiteSync;
   if (!settings.apiUrl) {
     console.log(`[propertySync:mock] ${action} → ${property.id} (${property.title}) — website sync not configured`);
@@ -35,7 +38,7 @@ export async function pushPropertyToWebsite(property: Property, action: SyncActi
   }
 }
 
-function toWebsitePayload(p: Property) {
+function toWebsitePayload(p: PropertyWithImages) {
   return {
     crmId: p.id,
     title: p.title,
@@ -53,5 +56,13 @@ function toWebsitePayload(p: Property) {
     latitude: p.latitude,
     longitude: p.longitude,
     youtubeUrl: p.youtubeUrl,
+    videoUrl: resolveMediaUrl(p.videoUrl),
+    // Previously omitted entirely — a property created/edited through the CRM synced to
+    // the public site with every field except its photos, since the images relation
+    // (loaded on every route that calls this) was never read into the payload.
+    images: (p.images ?? [])
+      .slice()
+      .sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0) || a.sortOrder - b.sortOrder)
+      .map((img) => ({ url: resolveMediaUrl(img.url), isPrimary: img.isPrimary })),
   };
 }

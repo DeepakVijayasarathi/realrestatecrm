@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { Badge, ErrorBanner, PageHeader, Select, Spinner } from "@/components/ui";
+import { Badge, Button, ErrorBanner, Field, Input, Modal, PageHeader, Select, Spinner } from "@/components/ui";
 import { KanbanIcon } from "@/components/icons";
 import { AUTO_MESSAGE_STAGES, Lead, PIPELINE_STAGES, PipelineStage, fmtMoney, labelize } from "@/lib/types";
 
@@ -30,6 +30,14 @@ export default function PipelinePage() {
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
+  // Moving a lead to Site Visit Scheduled fires an automated WhatsApp confirming the
+  // date/time — without asking here too, this board (drag-and-drop or the mobile select)
+  // was the one path left that could still fire it quoting a stale, unrelated followUpAt
+  // instead of a real one (the lead detail page's own "Schedule visit" button already
+  // prompts for this; this board called the same endpoint without ever asking).
+  const [siteVisitPrompt, setSiteVisitPrompt] = useState<string | null>(null);
+  const [siteVisitDateTime, setSiteVisitDateTime] = useState("");
+  const [siteVisitBusy, setSiteVisitBusy] = useState(false);
 
   const load = useCallback(() => {
     api.get<{ data: Board }>("/leads/board").then((res) => setBoard(res.data)).catch((e) => setError(e.message));
@@ -44,8 +52,12 @@ export default function PipelinePage() {
     return () => clearInterval(t);
   }, [load]);
 
-  async function moveLead(leadId: string, toStage: PipelineStage) {
+  async function moveLead(leadId: string, toStage: PipelineStage, followUpAt?: string) {
     if (!board) return;
+    if (toStage === "SITE_VISIT_SCHEDULED" && !followUpAt) {
+      setSiteVisitPrompt(leadId);
+      return;
+    }
     // Optimistic move
     const prev = board;
     const next: Board = Object.fromEntries(
@@ -61,10 +73,22 @@ export default function PipelinePage() {
     }
     setBoard(next);
     try {
-      await api.post(`/leads/${leadId}/change-stage`, { stage: toStage });
+      await api.post(`/leads/${leadId}/change-stage`, { stage: toStage, followUpAt });
     } catch (e) {
       setBoard(prev);
       setError(e instanceof Error ? e.message : "Move failed");
+    }
+  }
+
+  async function confirmSiteVisit() {
+    if (!siteVisitPrompt || !siteVisitDateTime) return;
+    setSiteVisitBusy(true);
+    try {
+      await moveLead(siteVisitPrompt, "SITE_VISIT_SCHEDULED", siteVisitDateTime);
+      setSiteVisitPrompt(null);
+      setSiteVisitDateTime("");
+    } finally {
+      setSiteVisitBusy(false);
     }
   }
 
@@ -149,6 +173,21 @@ export default function PipelinePage() {
           );
         })}
       </div>
+
+      <Modal open={!!siteVisitPrompt} onClose={() => setSiteVisitPrompt(null)} title="Schedule site visit">
+        <div className="space-y-4">
+          <Field label="Visit date & time *">
+            <Input type="datetime-local" value={siteVisitDateTime} onChange={(e) => setSiteVisitDateTime(e.target.value)} />
+          </Field>
+          <p className="text-xs text-slate-500">This sends the site visit confirmation WhatsApp to the client with this date/time.</p>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setSiteVisitPrompt(null)}>Cancel</Button>
+            <Button disabled={!siteVisitDateTime || siteVisitBusy} onClick={confirmSiteVisit}>
+              {siteVisitBusy ? "Sending…" : "Confirm & send"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

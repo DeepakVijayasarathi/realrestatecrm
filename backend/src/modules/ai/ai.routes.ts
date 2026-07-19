@@ -26,7 +26,10 @@ async function getProperty(id: string) {
  * can't be used as a side door around the scoping enforced on /leads/:id. */
 async function getLead(id: string, user: AuthUser) {
   if (user.role === Role.PROPERTY_STAFF) throw forbidden();
-  const where = user.role === Role.SALES_EXECUTIVE ? { id, assignedToId: user.id } : { id };
+  // Same OR-based scope as leads.routes.ts's scopeFor() — a Sales Executive can draft
+  // for a lead they created even if it's unassigned, not only ones assigned to them.
+  const where: Prisma.LeadWhereInput =
+    user.role === Role.SALES_EXECUTIVE ? { id, OR: [{ assignedToId: user.id }, { createdById: user.id }] } : { id };
   const lead = await prisma.lead.findFirst({ where });
   if (!lead) throw notFound("Lead");
   return lead;

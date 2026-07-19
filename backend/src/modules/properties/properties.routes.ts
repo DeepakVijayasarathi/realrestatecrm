@@ -251,6 +251,10 @@ router.post(
           })
         )
       );
+      // Photos are added here, not through the create/update routes (the property form
+      // saves the record first, then uploads photos on the edit page) — without this, a
+      // property synced to the public website would never actually get its images.
+      pushPropertyToWebsite({ ...property, images: [...property.images, ...created] }, "updated");
       res.status(201).json({ data: created });
     } catch (err) {
       next(err);
@@ -262,6 +266,8 @@ router.delete("/:id/images/:imageId", requireRole(...propertyEditors), async (re
   try {
     const image = await prisma.propertyImage.delete({ where: { id: req.params.imageId } });
     deleteLocalUpload(image.url);
+    const property = await prisma.property.findUnique({ where: { id: req.params.id }, include: { images: true } });
+    if (property) pushPropertyToWebsite(property, "updated");
     res.json({ message: "Image removed" });
   } catch (err) {
     next(err);
@@ -289,8 +295,10 @@ router.post(
       const updated = await prisma.property.update({
         where: { id: property.id },
         data: { videoUrl: `/uploads/${req.file.filename}` },
+        include: { images: true },
       });
       await audit(req.user!.id, "property_video_uploaded", "property", property.id);
+      pushPropertyToWebsite(updated, "updated");
       res.status(201).json({ data: { videoUrl: updated.videoUrl } });
     } catch (err) {
       next(err);
@@ -303,8 +311,13 @@ router.delete("/:id/video", requireRole(...propertyEditors), async (req, res, ne
     const property = await prisma.property.findUnique({ where: { id: req.params.id } });
     if (!property) throw notFound("Property");
     deleteLocalUpload(property.videoUrl);
-    await prisma.property.update({ where: { id: property.id }, data: { videoUrl: null } });
+    const updated = await prisma.property.update({
+      where: { id: property.id },
+      data: { videoUrl: null },
+      include: { images: true },
+    });
     await audit(req.user!.id, "property_video_removed", "property", property.id);
+    pushPropertyToWebsite(updated, "updated");
     res.json({ message: "Video removed" });
   } catch (err) {
     next(err);
@@ -342,9 +355,10 @@ router.post(
             ...row,
             amenities: row.amenities ? row.amenities.split("|").map((a) => a.trim()) : [],
           });
-          await prisma.property.create({
+          const property = await prisma.property.create({
             data: { ...data, videoUrl: data.videoUrl || null, assignedToId: req.user!.id },
           });
+          pushPropertyToWebsite({ ...property, images: [] }, "created");
           created++;
         } catch (e) {
           errors.push({ row: i + 2, message: e instanceof Error ? e.message.slice(0, 200) : "Invalid row" });

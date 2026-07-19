@@ -53,11 +53,17 @@ router.get("/dashboard", async (req, res, next) => {
         ? prisma.lead.groupBy({ by: ["assignedToId"], where: { assignedToId: { not: null } }, _count: true })
         : Promise.resolve([]),
       prisma.property.count({ where: { status: "AVAILABLE" } }),
+      // These three previously counted company-wide regardless of role — sitting right
+      // next to totalLeads/newToday, which ARE scoped to "mine" for non-managers, that
+      // made a Sales Executive's dashboard silently mix personal and company-wide numbers
+      // with no visual distinction. Scoped to the same `mine` lead-visibility rule as
+      // everything else on this endpoint (a manager's `mine` is `{}`, so this is a no-op
+      // for them — still company-wide, correctly).
       prisma.whatsAppLog.count({
-        where: { createdAt: { gte: startOfDay }, propertyIds: { isEmpty: false } },
+        where: { createdAt: { gte: startOfDay }, propertyIds: { isEmpty: false }, lead: mine },
       }),
-      prisma.whatsAppLog.count({ where: { createdAt: { gte: startOfDay } } }),
-      prisma.partnerLeadShare.count(),
+      prisma.whatsAppLog.count({ where: { createdAt: { gte: startOfDay }, lead: mine } }),
+      prisma.partnerLeadShare.count({ where: { lead: mine } }),
       prisma.lead.count({ where: { ...mine, status: LeadStatus.CONVERTED } }),
       prisma.lead.count({
         where: {
