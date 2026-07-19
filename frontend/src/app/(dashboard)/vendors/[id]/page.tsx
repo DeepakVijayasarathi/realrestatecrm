@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/toast";
-import { Badge, Button, Card, ErrorBanner, Field, Input, Modal, Select, Spinner, Textarea } from "@/components/ui";
-import { SendIcon } from "@/components/icons";
+import { Badge, Button, Card, ConfirmDialog, ErrorBanner, Field, Input, Modal, Select, Spinner, Textarea } from "@/components/ui";
+import { PencilIcon, SendIcon, TrashIcon } from "@/components/icons";
 import { Vendor, VENDOR_AUTO_MESSAGE_STAGES, VENDOR_STAGES, VendorStage, fmtDate, labelize } from "@/lib/types";
 
 interface VendorDetail extends Vendor {
@@ -30,12 +30,20 @@ const REQUIREMENT_FIELDS: { key: string; label: string; placeholder: string }[] 
 
 export default function VendorDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const { hasRole } = useAuth();
   const canManage = hasRole("SALES_MANAGER", "SALES_EXECUTIVE", "PROPERTY_STAFF");
+  const canDelete = hasRole("SALES_MANAGER");
   const toast = useToast();
   const [vendor, setVendor] = useState<VendorDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [templates, setTemplates] = useState<Template[]>([]);
+
+  // Edit / delete
+  const [showEdit, setShowEdit] = useState(false);
+  const [editForm, setEditForm] = useState({ name: "", contactPerson: "", phone: "", whatsapp: "", email: "", city: "", propertyTypes: "", notes: "" });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   // Stage-change flow — a plain select fires most transitions immediately, but two
   // stages need extra info first (the client requirement, or the visit date/time), so
@@ -61,6 +69,48 @@ export default function VendorDetailPage() {
   useEffect(() => {
     api.get<{ data: Template[] }>("/whatsapp/templates?audience=VENDOR").then((r) => setTemplates(r.data.filter((t) => t.isActive))).catch(() => {});
   }, []);
+
+  function openEdit() {
+    if (!vendor) return;
+    setEditForm({
+      name: vendor.name,
+      contactPerson: vendor.contactPerson ?? "",
+      phone: vendor.phone ?? "",
+      whatsapp: vendor.whatsapp ?? "",
+      email: vendor.email ?? "",
+      city: vendor.city ?? "",
+      propertyTypes: vendor.propertyTypes ?? "",
+      notes: vendor.notes ?? "",
+    });
+    setShowEdit(true);
+  }
+
+  async function saveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingEdit(true);
+    setError(null);
+    try {
+      await api.put(`/vendors/${id}`, editForm);
+      toast("Vendor updated");
+      setShowEdit(false);
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  async function deleteVendor() {
+    try {
+      await api.del(`/vendors/${id}`);
+      toast(`Deleted "${vendor?.name}"`);
+      router.push("/vendors");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delete failed");
+      setConfirmingDelete(false);
+    }
+  }
 
   function requestStageChange(stage: VendorStage) {
     if (stage === "REQUIREMENT_SENT" || stage === "SITE_VISIT_SCHEDULED") {
@@ -140,6 +190,14 @@ export default function VendorDetailPage() {
             <Button onClick={() => setShowSend(true)}>
               <SendIcon className="mr-1.5 inline h-3.5 w-3.5" />Send WhatsApp
             </Button>
+            <Button variant="secondary" onClick={openEdit}>
+              <PencilIcon className="mr-1.5 inline h-3.5 w-3.5" />Edit
+            </Button>
+            {canDelete && (
+              <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
+                <TrashIcon className="mr-1.5 inline h-3.5 w-3.5" />Delete
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -264,6 +322,49 @@ export default function VendorDetailPage() {
           </div>
         </div>
       </Modal>
+
+      <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Edit vendor">
+        <form onSubmit={saveEdit} className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="Name *">
+              <Input required value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} />
+            </Field>
+            <Field label="Contact person">
+              <Input value={editForm.contactPerson} onChange={(e) => setEditForm((f) => ({ ...f, contactPerson: e.target.value }))} />
+            </Field>
+            <Field label="Phone">
+              <Input type="tel" value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} />
+            </Field>
+            <Field label="WhatsApp">
+              <Input type="tel" value={editForm.whatsapp} onChange={(e) => setEditForm((f) => ({ ...f, whatsapp: e.target.value }))} />
+            </Field>
+            <Field label="Email">
+              <Input type="email" value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} />
+            </Field>
+            <Field label="City">
+              <Input value={editForm.city} onChange={(e) => setEditForm((f) => ({ ...f, city: e.target.value }))} />
+            </Field>
+            <Field label="Property types supplied">
+              <Input value={editForm.propertyTypes} onChange={(e) => setEditForm((f) => ({ ...f, propertyTypes: e.target.value }))} />
+            </Field>
+          </div>
+          <Field label="Notes">
+            <Textarea rows={3} value={editForm.notes} onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))} />
+          </Field>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={() => setShowEdit(false)}>Cancel</Button>
+            <Button type="submit" disabled={savingEdit}>{savingEdit ? "Saving…" : "Save"}</Button>
+          </div>
+        </form>
+      </Modal>
+
+      <ConfirmDialog
+        open={confirmingDelete}
+        title="Delete vendor"
+        message={`Delete "${vendor.name}" and their WhatsApp history? This cannot be undone.`}
+        onConfirm={deleteVendor}
+        onCancel={() => setConfirmingDelete(false)}
+      />
     </div>
   );
 }
