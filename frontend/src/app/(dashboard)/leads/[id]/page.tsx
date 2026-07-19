@@ -13,7 +13,7 @@ import {
   AI_LANGUAGES, AUTO_MESSAGE_STAGES, Lead, PIPELINE_STAGES, PartnerCompany, Property, User,
   fmtDate, fmtMoney, labelize,
 } from "@/lib/types";
-import { ArrowRightLeftIcon, BuildingIcon, SearchIcon, SendIcon } from "@/components/icons";
+import { ArrowRightLeftIcon, BuildingIcon, CalendarIcon, SearchIcon, SendIcon } from "@/components/icons";
 import { useToast } from "@/components/toast";
 
 interface LeadDetail extends Lead {
@@ -153,10 +153,24 @@ export default function LeadDetailPage() {
     }
   }
 
+  // Converts an ISO string to the "YYYY-MM-DDTHH:mm" shape a datetime-local input needs,
+  // in the browser's own local time — so rescheduling shows the existing time correctly
+  // instead of a blank field (or worse, a shifted one).
+  function toDateTimeLocal(iso?: string | null): string {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function openSiteVisitPrompt() {
+    setSiteVisitDateTime(toDateTimeLocal(lead?.followUpAt));
+    setShowSiteVisitPrompt(true);
+  }
+
   function requestStageChange(stage: string) {
     if (stage === "SITE_VISIT_SCHEDULED") {
-      setSiteVisitDateTime("");
-      setShowSiteVisitPrompt(true);
+      openSiteVisitPrompt();
     } else {
       act(() => api.post(`/leads/${id}/change-stage`, { stage }), undefined, `Stage updated to ${labelize(stage)}`);
     }
@@ -283,6 +297,9 @@ export default function LeadDetailPage() {
             )}
             <Button onClick={() => setShowSendModal(true)}>
               <SendIcon className="mr-1.5 inline h-3.5 w-3.5" />Send WhatsApp
+            </Button>
+            <Button variant="secondary" onClick={openSiteVisitPrompt}>
+              <CalendarIcon className="mr-1.5 inline h-3.5 w-3.5" />Schedule visit
             </Button>
             <Button variant="secondary" onClick={() => setShowEdit(true)}>Edit</Button>
             <Button variant="secondary" onClick={() => setShowShare(true)}>Share to partner</Button>
