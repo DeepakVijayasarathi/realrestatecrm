@@ -164,12 +164,10 @@ async function handleInboundMessages(events: InboundEvent[]) {
       managers.forEach((m) => recipientIds.add(m.id));
     }
     const title = `New WhatsApp reply from ${lead.fullName}${lead.assignedToId ? "" : " (unassigned)"}`;
+    // In-app only — no email channel is configured/wanted for this notification.
     await Promise.all(
       [...recipientIds].map((userId) =>
-        // email: true — an in-app bell is easy to miss if nobody has the CRM open; a
-        // reply from a client is exactly the kind of thing that should reach someone
-        // even when they're away from the dashboard (same as follow-up-due reminders).
-        notify({ userId, type: NotificationType.GENERAL, title, body: e.body.slice(0, 200), meta: { leadId: lead.id }, email: true })
+        notify({ userId, type: NotificationType.GENERAL, title, body: e.body.slice(0, 200), meta: { leadId: lead.id } })
       )
     );
 
