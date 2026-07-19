@@ -39,6 +39,11 @@ export const updateLeadSchema = createLeadSchema.partial().extend({
 
 export const changeStageSchema = z.object({
   stage: z.nativeEnum(PipelineStage),
+  // Only meaningful when moving to SITE_VISIT_SCHEDULED — lets the caller set the actual
+  // visit date/time in the same request instead of the automated message silently reusing
+  // whatever followUpAt happened to already be set (often unrelated, from a prior generic
+  // reminder), which read like the client's visit time was picked at random.
+  followUpAt: z.coerce.date().optional(),
 });
 
 export const assignSchema = z.object({

@@ -61,6 +61,12 @@ export default function LeadDetailPage() {
   const [shareForm, setShareForm] = useState({ partnerId: "", notesShared: "", sendWhatsApp: true });
   const [sending, setSending] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
+  // Moving a lead to Site Visit Scheduled fires an automated WhatsApp confirming the
+  // date/time — previously it silently reused whatever followUpAt happened to already be
+  // set (often an unrelated earlier reminder), so the client got confirmed for a time
+  // nobody actually picked. This prompts for the real visit time first.
+  const [showSiteVisitPrompt, setShowSiteVisitPrompt] = useState(false);
+  const [siteVisitDateTime, setSiteVisitDateTime] = useState("");
   const isPartner = user?.role === "PARTNER_USER";
   // Partners only get the partner-share history; internal tabs would always be empty for them
   const [tab, setTab] = useState<"timeline" | "whatsapp" | "partners" | "pipeline">(isPartner ? "partners" : "timeline");
@@ -146,6 +152,23 @@ export default function LeadDetailPage() {
     }
   }
 
+  function requestStageChange(stage: string) {
+    if (stage === "SITE_VISIT_SCHEDULED") {
+      setSiteVisitDateTime("");
+      setShowSiteVisitPrompt(true);
+    } else {
+      act(() => api.post(`/leads/${id}/change-stage`, { stage }), undefined, `Stage updated to ${labelize(stage)}`);
+    }
+  }
+
+  function confirmSiteVisit() {
+    act(
+      () => api.post(`/leads/${id}/change-stage`, { stage: "SITE_VISIT_SCHEDULED", followUpAt: siteVisitDateTime || undefined }),
+      () => setShowSiteVisitPrompt(false),
+      "Stage updated to Site Visit Scheduled"
+    );
+  }
+
   async function sendWhatsApp() {
     if (sendMode === "custom" && !customMessage.trim() && selected.size === 0) {
       return setActionError("Write a message or select at least one property");
@@ -225,7 +248,7 @@ export default function LeadDetailPage() {
               title="Stages marked ✉ send an automated WhatsApp to the client"
               value={lead.stage}
               disabled={actionBusy}
-              onChange={(e) => act(() => api.post(`/leads/${id}/change-stage`, { stage: e.target.value }), undefined, `Stage updated to ${labelize(e.target.value)}`)}
+              onChange={(e) => requestStageChange(e.target.value)}
             >
               {PIPELINE_STAGES.map((s) => (
                 <option key={s} value={s} disabled={s === "SHARED_TO_PARTNER"}>
@@ -497,6 +520,23 @@ export default function LeadDetailPage() {
       {/* Edit modal */}
       <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Edit lead" wide>
         <LeadForm initial={lead} onSaved={() => { setShowEdit(false); load(); }} onCancel={() => setShowEdit(false)} />
+      </Modal>
+
+      {/* Site visit date/time prompt — the automated confirmation WhatsApp needs a real
+          value here, not whatever the general follow-up date happens to be. */}
+      <Modal open={showSiteVisitPrompt} onClose={() => setShowSiteVisitPrompt(false)} title="Schedule site visit">
+        <div className="space-y-4">
+          <Field label="Visit date & time *">
+            <Input type="datetime-local" value={siteVisitDateTime} onChange={(e) => setSiteVisitDateTime(e.target.value)} />
+          </Field>
+          <p className="text-xs text-slate-500">This sends the site visit confirmation WhatsApp to the client with this date/time.</p>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setShowSiteVisitPrompt(false)}>Cancel</Button>
+            <Button disabled={!siteVisitDateTime || actionBusy} onClick={confirmSiteVisit}>
+              {actionBusy ? "Sending…" : "Confirm & send"}
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       {/* Send WhatsApp modal — the one place to compose a message, whether or not any

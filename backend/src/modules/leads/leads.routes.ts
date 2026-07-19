@@ -718,12 +718,14 @@ router.post("/:id/change-stage", validate(changeStageSchema), async (req, res, n
       throw badRequest("Use \"Share to partner\" to move a lead to this stage — it records who it was shared with, which a plain stage change can't.");
     }
     const impliedStatus = stageToStatus[stage];
+    const followUpAt: Date | undefined = req.body.followUpAt;
     const lead = await prisma.lead.update({
       where: { id: existing.id },
       data: {
         stage,
         ...(impliedStatus ? { status: impliedStatus } : {}),
         ...(stage === PipelineStage.REGISTRATION ? { convertedAt: new Date() } : {}),
+        ...(stage === PipelineStage.SITE_VISIT_SCHEDULED && followUpAt ? { followUpAt } : {}),
       },
       include: leadInclude,
     });
