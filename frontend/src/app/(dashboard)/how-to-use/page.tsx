@@ -53,6 +53,7 @@ const SECTIONS: Section[] = [
     steps: [
       "Use \"Share to partner\" on a lead's page when you want to hand it to an external referral company instead of servicing it yourself — this properly records who it was shared with (don't use the stage dropdown for this).",
       "Partner-company staff logging in themselves only see leads shared with their own company, and can update the referral status (Accepted/In Progress/Converted/etc.) as it moves along.",
+      "The WhatsApp message sent to the partner when you check \"Send WhatsApp\" is editable — set it up under Settings → Templates → Partner templates, with the key partner_referral. Until one is created there, a built-in default message is used.",
     ],
   },
   {
@@ -77,7 +78,7 @@ const SECTIONS: Section[] = [
     icon: SettingsIcon,
     title: "Settings (managers/admins only)",
     steps: [
-      "\"Templates & Currencies\" is where WhatsApp message templates live — client templates and vendor templates are grouped separately since they use different placeholders.",
+      "\"Templates & Currencies\" is where WhatsApp message templates live — client, vendor, and partner templates are grouped separately since each uses a different set of placeholders.",
       "\"Branding\" lets you change the app name, tagline, logo, and accent color shown throughout the app and on public pages.",
       "\"Integrations\" (Super Admin only) holds the actual WhatsApp/AI/Meta API credentials — secrets are masked on screen for safety.",
     ],

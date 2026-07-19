@@ -1075,37 +1075,60 @@ router.post("/:id/share-partner", validate(sharePartnerSchema), async (req, res,
       const clientUrl = env.clientUrl;
       const brandName = await getBrandName();
       const money = (v: unknown) => Number(v).toLocaleString("en-IN");
-      // Requirement only — client contact details stay inside the CRM
-      const lines: string[] = [
-        `🤝 *New lead referral from ${brandName}*`,
-        `👤 ${lead.fullName}`,
-        `📍 ${[lead.preferredArea, lead.city].filter(Boolean).join(", ") || "Location not specified"}`,
-        `🏠 ${lead.propertyType ?? "Any type"}${lead.bedrooms != null ? ` · ${lead.bedrooms}BR` : ""}`,
-        ...(lead.budgetMin || lead.budgetMax
-          ? [`💰 ${lead.currency} ${[lead.budgetMin && money(lead.budgetMin), lead.budgetMax && money(lead.budgetMax)].filter(Boolean).join(" – ")}`]
-          : []),
-        ...(req.body.notesShared || lead.requirementNotes ? [`📝 ${req.body.notesShared || lead.requirementNotes}`] : []),
-      ];
-      if (shortlist.length) {
-        lines.push("", "*Suggested properties:*");
-        for (const m of shortlist) {
-          const p = m.property;
-          lines.push(
-            [
-              `🏠 ${p.title}`,
-              `💰 ${p.currency} ${money(p.price)} · 📍 ${p.location}`,
-              p.images[0] ? `🖼 ${resolveMediaUrl(p.images[0].url)}` : null,
-              clientUrl ? `🔗 ${clientUrl}/properties/${p.id}` : null,
-            ].filter(Boolean).join("\n")
-          );
-        }
-      }
-      const waResult = await sendWhatsApp(partnerNumber, lines.join("\n"), partner.name);
+      const location = [lead.preferredArea, lead.city].filter(Boolean).join(", ") || "Location not specified";
+      const propertyType = `${lead.propertyType ?? "Any type"}${lead.bedrooms != null ? ` · ${lead.bedrooms}BR` : ""}`;
+      const budget = lead.budgetMin || lead.budgetMax
+        ? `${lead.currency} ${[lead.budgetMin && money(lead.budgetMin), lead.budgetMax && money(lead.budgetMax)].filter(Boolean).join(" – ")}`
+        : "";
+      const notes = req.body.notesShared || lead.requirementNotes || "";
+      const propertiesBlock = shortlist.length
+        ? shortlist
+            .map((m) => {
+              const p = m.property;
+              return [
+                `🏠 ${p.title}`,
+                `💰 ${p.currency} ${money(p.price)} · 📍 ${p.location}`,
+                p.images[0] ? `🖼 ${resolveMediaUrl(p.images[0].url)}` : null,
+                clientUrl ? `🔗 ${clientUrl}/properties/${p.id}` : null,
+              ].filter(Boolean).join("\n");
+            })
+            .join("\n\n")
+        : "";
+
+      // A manager-editable message (Settings > Templates > Partner) if one's been set up,
+      // otherwise the original hardcoded format — so this keeps working exactly as before
+      // for anyone who hasn't created a partner template yet.
+      const partnerTemplate = await prisma.whatsAppTemplate.findFirst({
+        where: { audience: "PARTNER", isActive: true, key: "partner_referral" },
+      });
+      const body = partnerTemplate
+        ? renderTemplate(partnerTemplate.body, {
+            partner_name: partner.name,
+            lead_name: lead.fullName,
+            location,
+            property_type: propertyType,
+            budget,
+            notes,
+            properties: propertiesBlock,
+            brand: brandName,
+            agent: req.user!.name,
+          })
+        : [
+            `🤝 *New lead referral from ${brandName}*`,
+            `👤 ${lead.fullName}`,
+            `📍 ${location}`,
+            `🏠 ${propertyType}`,
+            budget ? `💰 ${budget}` : null,
+            notes ? `📝 ${notes}` : null,
+            propertiesBlock ? `\n*Suggested properties:*\n${propertiesBlock}` : null,
+          ].filter(Boolean).join("\n");
+
+      const waResult = await sendWhatsApp(partnerNumber, body, partner.name);
       await prisma.whatsAppLog.create({
         data: {
           leadId: lead.id,
           toNumber: partnerNumber,
-          body: lines.join("\n"),
+          body,
           propertyIds: shortlist.map((m) => m.propertyId),
           sentById: req.user!.id,
           status: waResult.status,

@@ -242,7 +242,10 @@ router.get("/templates", async (req, res, next) => {
   try {
     if (req.user!.role === Role.PARTNER_USER) throw forbidden();
     const audience = req.query.audience as string | undefined;
-    const where = audience === "all" ? {} : { audience: (audience === "VENDOR" ? "VENDOR" : "LEAD") as "LEAD" | "VENDOR" };
+    const where =
+      audience === "all"
+        ? {}
+        : { audience: (audience === "VENDOR" ? "VENDOR" : audience === "PARTNER" ? "PARTNER" : "LEAD") as "LEAD" | "VENDOR" | "PARTNER" };
     const templates = await prisma.whatsAppTemplate.findMany({ where, orderBy: { name: "asc" } });
     res.json({ data: templates });
   } catch (err) {
@@ -269,7 +272,7 @@ const templateSchema = z.object({
   key: z.string().min(2).regex(/^[a-z0-9_-]+$/, "Use lowercase letters, numbers, - and _"),
   name: z.string().min(2),
   body: z.string().min(5),
-  audience: z.enum(["LEAD", "VENDOR"]).default("LEAD"),
+  audience: z.enum(["LEAD", "VENDOR", "PARTNER"]).default("LEAD"),
   isActive: z.boolean().default(true),
 });
 

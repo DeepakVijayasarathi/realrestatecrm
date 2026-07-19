@@ -79,6 +79,7 @@ enum VendorStage {
 enum TemplateAudience {
   LEAD
   VENDOR
+  PARTNER
 }
 
 enum Priority {
