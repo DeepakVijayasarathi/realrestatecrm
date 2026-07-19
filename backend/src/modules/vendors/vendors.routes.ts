@@ -15,6 +15,11 @@ import {
 } from "./vendors.schemas";
 
 const router = Router();
+
+// Feature switched off for now — soft-disabled rather than removed, so re-enabling later
+// is just deleting this one block. Schema, data, and the rest of the module are untouched.
+router.use((_req, res) => res.status(503).json({ message: "Vendor management is currently disabled" }));
+
 router.use(requireAuth);
 
 // Vendors (upstream property suppliers) are internal-staff-only — partner-company
