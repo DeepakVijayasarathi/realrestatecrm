@@ -82,6 +82,18 @@ export default function PropertiesPage() {
     }
   }
 
+  async function updateStatus(property: Property, nextStatus: string) {
+    // Optimistic — this is meant to be a one-click action, not another form to submit.
+    setResult((r) => r && { ...r, data: r.data.map((p) => (p.id === property.id ? { ...p, status: nextStatus as Property["status"] } : p)) });
+    try {
+      await api.put(`/properties/${property.id}`, { status: nextStatus });
+      toast(`"${property.title}" marked ${labelize(nextStatus)}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Status update failed");
+      load();
+    }
+  }
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -174,16 +186,26 @@ export default function PropertiesPage() {
                   </div>
                 </Link>
                 {canEdit && (
-                  <div className="flex items-center justify-end gap-1 border-t border-slate-100 px-2 py-1.5">
-                    <Link href={`/properties/${p.id}`} title="View" className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700">
-                      <EyeIcon className="h-4 w-4" />
-                    </Link>
-                    <Link href={`/properties/${p.id}?edit=true`} title="Edit" className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700">
-                      <PencilIcon className="h-4 w-4" />
-                    </Link>
-                    <button title="Delete" className="rounded-md p-1.5 text-slate-500 hover:bg-red-50 hover:text-red-600" onClick={() => setDeletingProperty(p)}>
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
+                  <div className="flex items-center justify-between gap-1 border-t border-slate-100 px-2 py-1.5">
+                    <Select
+                      className="w-auto py-1 text-xs"
+                      value={p.status}
+                      title="Update availability"
+                      onChange={(e) => updateStatus(p, e.target.value)}
+                    >
+                      {AVAILABILITY.map((s) => <option key={s} value={s}>{labelize(s)}</option>)}
+                    </Select>
+                    <div className="flex items-center gap-1">
+                      <Link href={`/properties/${p.id}`} title="View" className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700">
+                        <EyeIcon className="h-4 w-4" />
+                      </Link>
+                      <Link href={`/properties/${p.id}?edit=true`} title="Edit" className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700">
+                        <PencilIcon className="h-4 w-4" />
+                      </Link>
+                      <button title="Delete" className="rounded-md p-1.5 text-slate-500 hover:bg-red-50 hover:text-red-600" onClick={() => setDeletingProperty(p)}>
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 )}
               </Card>
