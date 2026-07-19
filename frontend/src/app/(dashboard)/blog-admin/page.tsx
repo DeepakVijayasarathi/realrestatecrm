@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Badge, Button, Card, ErrorBanner, Field, Input, Modal, PageHeader, Spinner, Textarea } from "@/components/ui";
+import { Badge, Button, Card, ConfirmDialog, ErrorBanner, Field, Input, Modal, PageHeader, Spinner, Textarea } from "@/components/ui";
 import { NewspaperIcon } from "@/components/icons";
 import { BlogPost, fmtDate } from "@/lib/types";
 
@@ -17,6 +17,7 @@ export default function BlogAdminPage() {
   const [editing, setEditing] = useState<BlogPost | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState<BlogPost | null>(null);
 
   const load = useCallback(() => {
     api.get<{ data: BlogPost[] }>("/blog/admin/all").then((r) => setPosts(r.data)).catch((e) => setError(e.message));
@@ -51,8 +52,8 @@ export default function BlogAdminPage() {
   }
 
   async function remove(p: BlogPost) {
-    if (!confirm(`Delete "${p.title}"? This cannot be undone.`)) return;
     await api.del(`/blog/${p.id}`).catch((e) => setError(e.message));
+    setDeleting(null);
     load();
   }
 
@@ -63,7 +64,7 @@ export default function BlogAdminPage() {
       <PageHeader
         icon={NewspaperIcon}
         title="Blog"
-        subtitle="Articles that power the public insights &amp; guides site"
+        subtitle="Articles that power the public insights & guides site"
         actions={<Button onClick={() => openForm()}>+ New post</Button>}
       />
       <ErrorBanner message={error} />
@@ -80,7 +81,7 @@ export default function BlogAdminPage() {
               </div>
               <div className="flex shrink-0 gap-2">
                 <Button variant="secondary" size="sm" onClick={() => openForm(p)}>Edit</Button>
-                <Button variant="danger" size="sm" onClick={() => remove(p)}>Delete</Button>
+                <Button variant="danger" size="sm" onClick={() => setDeleting(p)}>Delete</Button>
               </div>
             </div>
           ))}
@@ -117,6 +118,14 @@ export default function BlogAdminPage() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        open={!!deleting}
+        title="Delete post"
+        message={`Delete "${deleting?.title}"? This cannot be undone.`}
+        onConfirm={() => deleting && remove(deleting)}
+        onCancel={() => setDeleting(null)}
+      />
     </div>
   );
 }

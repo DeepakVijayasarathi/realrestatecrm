@@ -13,6 +13,32 @@ function ResetForm() {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+
+  // Landing here without a token (typed URL, mangled email link) previously showed the
+  // normal form, then failed submission with an opaque "Validation failed" — say what's
+  // actually wrong up front instead.
+  if (!token) {
+    return (
+      <Card className="w-full max-w-md p-8 text-center">
+        <h1 className="mb-2 text-lg font-semibold">Invalid reset link</h1>
+        <p className="text-sm text-slate-500">
+          This page only works from the link in a password-reset email. Request a new one from the login page.
+        </p>
+        <Button className="mt-6 w-full" onClick={() => router.push("/login")}>Back to login</Button>
+      </Card>
+    );
+  }
+
+  if (done) {
+    return (
+      <Card className="w-full max-w-md p-8 text-center">
+        <h1 className="mb-2 text-lg font-semibold">Password updated</h1>
+        <p className="text-sm text-slate-500">You can now log in with your new password.</p>
+        <Button className="mt-6 w-full" onClick={() => router.push("/login")}>Go to login</Button>
+      </Card>
+    );
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,7 +48,9 @@ function ResetForm() {
     setError(null);
     try {
       await api.post("/auth/reset-password", { token, password });
-      router.push("/login");
+      // Show explicit confirmation instead of silently landing on the login page —
+      // the backend's success message was previously dropped on the floor.
+      setDone(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reset failed");
     } finally {
