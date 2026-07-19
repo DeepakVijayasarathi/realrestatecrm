@@ -449,26 +449,34 @@ router.post("/import", requireRole(...salesTeam), fileUpload.single("file"), asy
     let created = 0;
     const errors: { row: number; message: string }[] = [];
     for (const [i, row] of rows.entries()) {
+      // Run every row through the same schema manual creation uses — a raw prisma.create()
+      // here previously bypassed all of it (name format, phone shape, email shape, enum
+      // validity), so a CSV could silently create leads a human typing the same values into
+      // the form would have been blocked from creating (verified: a 1-character name and a
+      // mobile value of "banana-not-a-phone" both imported without error).
+      const parsed = createLeadSchema.safeParse({
+        fullName: row.fullName,
+        mobile: row.mobile,
+        whatsappNumber: row.whatsappNumber || row.mobile,
+        email: row.email || undefined,
+        country: row.country || undefined,
+        city: row.city || undefined,
+        preferredArea: row.preferredArea || undefined,
+        budgetMin: row.budgetMin || undefined,
+        budgetMax: row.budgetMax || undefined,
+        currency: row.currency || "INR",
+        propertyType: row.propertyType || undefined,
+        bedrooms: row.bedrooms || undefined,
+        visaType: row.visaType || undefined,
+      });
+      if (!parsed.success) {
+        errors.push({ row: i + 2, message: parsed.error.errors.map((e) => e.message).join("; ") });
+        continue;
+      }
       try {
-        if (!row.fullName || !row.mobile) throw new Error("fullName and mobile are required");
+        const { assignedToId, ...data } = parsed.data;
         await prisma.lead.create({
-          data: {
-            fullName: row.fullName,
-            mobile: row.mobile,
-            whatsappNumber: row.whatsappNumber || row.mobile,
-            email: row.email || null,
-            country: row.country || null,
-            city: row.city || null,
-            preferredArea: row.preferredArea || null,
-            budgetMin: row.budgetMin ? Number(row.budgetMin) : null,
-            budgetMax: row.budgetMax ? Number(row.budgetMax) : null,
-            currency: row.currency || "INR",
-            propertyType: (row.propertyType as never) || null,
-            bedrooms: row.bedrooms ? Number(row.bedrooms) : null,
-            visaType: row.visaType || null,
-            source: LeadSource.IMPORT,
-            createdById: req.user!.id,
-          },
+          data: { ...data, source: LeadSource.IMPORT, createdById: req.user!.id },
         });
         created++;
       } catch (e) {
