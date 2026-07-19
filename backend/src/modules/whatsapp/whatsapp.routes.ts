@@ -151,28 +151,27 @@ async function handleInboundMessages(events: InboundEvent[]) {
     // The auto-reply told the client "our team will get back to you shortly" — this is
     // what actually makes that true. Without it, a reply just sat in the DB until
     // whichever staff member happened to open that lead's page next.
+    //
+    // Recipients: the assigned exec (if any) always, PLUS every Super Admin always —
+    // not one or the other. An unassigned lead still reaches every active Sales Manager
+    // too, same as the existing "new unassigned lead" notification pattern.
+    const admins = await prisma.user.findMany({ where: { role: Role.SUPER_ADMIN, isActive: true }, select: { id: true } });
+    const recipientIds = new Set(admins.map((a) => a.id));
     if (lead.assignedToId) {
-      await notify({
-        userId: lead.assignedToId,
-        type: NotificationType.GENERAL,
-        title: `New WhatsApp reply from ${lead.fullName}`,
-        body: e.body.slice(0, 200),
-        meta: { leadId: lead.id },
-      });
+      recipientIds.add(lead.assignedToId);
     } else {
-      const managers = await prisma.user.findMany({ where: { role: { in: [Role.SALES_MANAGER, Role.SUPER_ADMIN] }, isActive: true } });
-      await Promise.all(
-        managers.map((m) =>
-          notify({
-            userId: m.id,
-            type: NotificationType.GENERAL,
-            title: `New WhatsApp reply from ${lead.fullName} (unassigned)`,
-            body: e.body.slice(0, 200),
-            meta: { leadId: lead.id },
-          })
-        )
-      );
+      const managers = await prisma.user.findMany({ where: { role: Role.SALES_MANAGER, isActive: true }, select: { id: true } });
+      managers.forEach((m) => recipientIds.add(m.id));
     }
+    const title = `New WhatsApp reply from ${lead.fullName}${lead.assignedToId ? "" : " (unassigned)"}`;
+    await Promise.all(
+      [...recipientIds].map((userId) =>
+        // email: true — an in-app bell is easy to miss if nobody has the CRM open; a
+        // reply from a client is exactly the kind of thing that should reach someone
+        // even when they're away from the dashboard (same as follow-up-due reminders).
+        notify({ userId, type: NotificationType.GENERAL, title, body: e.body.slice(0, 200), meta: { leadId: lead.id }, email: true })
+      )
+    );
 
     const sentById = lead.assignedToId ?? lead.createdById;
     if (sentById) {

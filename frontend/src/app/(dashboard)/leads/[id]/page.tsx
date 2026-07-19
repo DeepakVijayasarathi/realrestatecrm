@@ -62,6 +62,12 @@ export default function LeadDetailPage() {
   const [shareForm, setShareForm] = useState({ partnerId: "", notesShared: "", sendWhatsApp: true });
   const [sending, setSending] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
+  // Inline reply box in the conversation view — replying previously meant leaving the
+  // thread entirely to open the Send WhatsApp modal, picking a template or writing a
+  // message there, and coming back to see it. This sends a plain message right from
+  // where you're already reading the conversation, like an actual chat.
+  const [replyText, setReplyText] = useState("");
+  const [replySending, setReplySending] = useState(false);
   // Moving a lead to Site Visit Scheduled fires an automated WhatsApp confirming the
   // date/time — previously it silently reused whatever followUpAt happened to already be
   // set (often an unrelated earlier reminder), so the client got confirmed for a time
@@ -212,6 +218,24 @@ export default function LeadDetailPage() {
       setActionError(e instanceof Error ? e.message : "Action failed");
     }
     setSending(false);
+  }
+
+  async function sendReply(e: React.FormEvent) {
+    e.preventDefault();
+    const body = replyText.trim();
+    if (!body || replySending) return;
+    setReplySending(true);
+    setActionError(null);
+    try {
+      const res = await api.post<{ message?: string }>(`/leads/${id}/send-whatsapp`, { customMessage: body });
+      setReplyText("");
+      await load();
+      if (res.message) toast(res.message);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Send failed");
+    } finally {
+      setReplySending(false);
+    }
   }
 
   if (error) return <p className="text-sm text-red-600">{error}</p>;
@@ -519,6 +543,19 @@ export default function LeadDetailPage() {
                     )
                   )}
                   {conversation.length === 0 && <p className="text-sm text-slate-400">No WhatsApp messages yet.</p>}
+                  {!isPartner && (
+                    <form onSubmit={sendReply} className="sticky bottom-0 mt-2 flex gap-2 border-t border-slate-200 bg-white pt-3">
+                      <Input
+                        placeholder="Type a reply…"
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button type="submit" disabled={!replyText.trim() || replySending}>
+                        {replySending ? "Sending…" : <><SendIcon className="mr-1.5 inline h-3.5 w-3.5" />Send</>}
+                      </Button>
+                    </form>
+                  )}
                 </div>
               )}
               {tab === "partners" && (

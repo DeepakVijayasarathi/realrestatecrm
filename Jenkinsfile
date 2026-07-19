@@ -48,7 +48,7 @@ pipeline {
         SMTP_PORT = "587"
         SMTP_USER = ""
         SMTP_PASS = ""
-        MAIL_FROM = "RealRest CRM <noreply@realrest.example>"
+        MAIL_FROM = "Thanjai Property CRM <noreply@realrest.example>"
     }
 
     stages {
