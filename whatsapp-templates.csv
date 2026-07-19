@@ -1,0 +1,16 @@
+key,name,body,isActive
+welcome,Welcome message,"Hi {{name}}! 👋 Thank you for your interest. I'm {{agent}} from RealRest. I'll help you find the right property for your requirements. When is a good time to talk?",true
+property_shortlist,Property shortlist,"Hi {{name}}, based on your requirements here are some properties I think you'll love:
+
+{{properties}}
+
+Let me know which ones you'd like to view! — {{agent}}",true
+follow_up,Follow-up message,"Hi {{name}}, just following up on the properties I shared earlier. Did any of them catch your eye? Happy to arrange a viewing. — {{agent}}",true
+site_visit_reminder,Site visit reminder,"Hi {{name}}, a gentle reminder about your upcoming site visit. Please let me know if you need to reschedule. — {{agent}}",true
+partner_transfer,Partner transfer notification,"Hi {{name}}, to serve you better we've connected you with our specialist partner team. They will contact you shortly with tailored options. — {{agent}}",true
+initial_contact_intro,Initial contact intro (auto),"Hi {{name}}! 👋 I'm {{agent}} from RealRest, following up on your enquiry. I'd love to understand your requirements better — what are you looking for?",true
+site_visit_before,Site visit confirmation (auto),"Hi {{name}}! 👋 Confirming your site visit scheduled for {{time}}. {{agent}} will meet you there — see you soon!",true
+site_visit_feedback,Site visit feedback request (auto),"Hi {{name}}, thanks for visiting the property today! We'd love your feedback — what did you think, and are you considering it further? — {{agent}}",true
+negotiation_update,Negotiation check-in (auto),"Hi {{name}}, let's finalize the best terms for your new property. {{agent}} is ready to discuss pricing and next steps whenever you are!",true
+bank_loan_assist,Bank loan assistance (auto),"Hi {{name}}, we're now at the loan/financing stage. {{agent}} can help coordinate with the bank and paperwork — let us know if you need any assistance!",true
+registration_testimonial,Registration testimonial & referral (auto),"Congratulations {{name}} on your new home! 🎉 We'd be grateful for a short testimonial, and if you know anyone else house-hunting, we'd love an introduction. — {{agent}}",true
