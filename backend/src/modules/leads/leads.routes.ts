@@ -80,7 +80,11 @@ function scopeFor(user: AuthUser): Prisma.LeadWhereInput {
   if (user.role === Role.PARTNER_USER) {
     return { partnerShares: { some: { partnerId: user.partnerCompanyId ?? "__none__" } } };
   }
-  return { assignedToId: user.id };
+  // Include leads the user created themselves, not just ones assigned to them — otherwise
+  // a Sales Executive/Property Staff who creates a lead and leaves "Assign to" as
+  // Unassigned (the default for every role, including their own) instantly and silently
+  // loses all access to it, with no way to find it again short of a manager reassigning it.
+  return { OR: [{ assignedToId: user.id }, { createdById: user.id }] };
 }
 
 async function getLeadScoped(id: string, user: AuthUser) {
