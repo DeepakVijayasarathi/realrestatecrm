@@ -861,22 +861,36 @@ router.post("/:id/send-whatsapp", validate(sendWhatsAppSchema), async (req, res,
     const properties = propertyIds.length
       ? await prisma.property.findMany({
           where: { id: { in: propertyIds } },
-          include: { images: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }], take: 1 } },
+          // Every photo, not just the primary — only the first property's primary photo
+          // can go out as a real inline attachment (see sendWhatsApp call below, and the
+          // comment on propertyBlock), but the rest are still worth a tappable link each
+          // rather than showing the client just one photo out of a whole gallery.
+          include: { images: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }], take: 5 } },
         })
       : [];
 
-    // Only one image can actually be attached as media per WhatsApp message — the first
-    // property's photo goes out as a real attachment (see sendWhatsApp call below), so it
-    // doesn't need its URL pasted as text too. Any additional properties still get a link.
+    // Only one image (the very first property's primary photo) can actually be attached
+    // as real media per WhatsApp message — every other photo, across every property in
+    // this send, goes out as a tappable link instead.
     const propertyBlock = properties
       .map((p, i) => {
-        const img = resolveMediaUrl(p.images[0]?.url);
+        const facts = [
+          p.bedrooms != null ? `${p.bedrooms} BR` : null,
+          p.bathrooms != null ? `${p.bathrooms} Bath` : null,
+          p.areaSqft ? `${p.areaSqft.toLocaleString("en-IN")} sqft` : null,
+          p.furnishing ? p.furnishing.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : null,
+        ].filter(Boolean).join(" · ");
+        const imageLinks = p.images
+          .map((img, imgIdx) => (i === 0 && imgIdx === 0 ? null : resolveMediaUrl(img.url)))
+          .filter((url): url is string => !!url)
+          .map((url) => `🖼 ${url}`);
         return [
           `🏠 *${p.title}*`,
           `💰 ${p.currency} ${Number(p.price).toLocaleString("en-US")}`,
           `📍 ${p.location}`,
+          facts || null,
           p.description ? p.description.slice(0, 160) : null,
-          img && i > 0 ? `🖼 ${img}` : null,
+          ...imageLinks,
         ].filter(Boolean).join("\n");
       })
       .join("\n\n");
