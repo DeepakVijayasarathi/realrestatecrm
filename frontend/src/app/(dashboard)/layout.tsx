@@ -25,6 +25,7 @@ import {
   SettingsIcon,
   SparklesIcon,
   TrendingUpIcon,
+  TruckIcon,
   UserIcon,
   UsersIcon,
 } from "@/components/icons";
@@ -46,6 +47,7 @@ const NAV_SECTIONS = [
       { href: "/leads", label: "CRM pipeline", icon: UsersIcon, roles: ["SALES_MANAGER", "SALES_EXECUTIVE", "PARTNER_USER"] },
       { href: "/properties", label: "Properties Inventory", icon: BuildingIcon, roles: null },
       { href: "/partners", label: "Partner Network", icon: BriefcaseIcon, roles: ["SALES_MANAGER", "SALES_EXECUTIVE", "PARTNER_USER"] },
+      { href: "/vendors", label: "Vendor Network", icon: TruckIcon, roles: ["SALES_MANAGER", "SALES_EXECUTIVE", "PROPERTY_STAFF"] },
       { href: "/site-visits", label: "Site Visits & Appts", icon: CalendarIcon, roles: ["SALES_MANAGER", "SALES_EXECUTIVE"] },
     ],
   },

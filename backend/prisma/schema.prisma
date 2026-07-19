@@ -58,6 +58,29 @@ enum PipelineStage {
   LOST_CLOSED
 }
 
+// Vendors are upstream property suppliers we source inventory from — distinct from
+// PartnerCompany, which is a downstream company we refer client leads to.
+enum VendorStage {
+  NEW
+  REQUIREMENT_SENT
+  PROPERTY_SHARED
+  MORE_DETAILS_REQUESTED
+  PROPERTY_VERIFIED
+  SHORTLISTED
+  SITE_VISIT_SCHEDULED
+  NEGOTIATION
+  DEAL_CLOSED
+  DEAL_LOST
+}
+
+// Which side a WhatsAppTemplate's placeholders are written for — a lead template's
+// {{name}}/{{agent}}/{{properties}} don't fit a vendor message that instead needs
+// {{vendor_name}}/{{location}}/{{budget}}, so the two must never share a dropdown.
+enum TemplateAudience {
+  LEAD
+  VENDOR
+}
+
 enum Priority {
   LOW
   MEDIUM
@@ -165,8 +188,8 @@ model User {
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
-  assignedLeads      Lead[]             @relation("AssignedLeads")
-  createdLeads       Lead[]             @relation("CreatedLeads")
+  assignedLeads      Lead[]              @relation("AssignedLeads")
+  createdLeads       Lead[]              @relation("CreatedLeads")
   notes              LeadNote[]
   activities         LeadActivity[]
   pipelineChanges    PipelineHistory[]
@@ -178,6 +201,8 @@ model User {
   shortlists         PropertyMatch[]
   blogPosts          BlogPost[]
   aiUsageLogs        AiUsageLog[]
+  vendorsCreated     Vendor[]
+  vendorWhatsappLogs VendorWhatsAppLog[]
 
   @@index([role])
   @@index([partnerCompanyId])
@@ -274,14 +299,14 @@ model LeadActivity {
 }
 
 model PipelineHistory {
-  id          String        @id @default(cuid())
-  lead        Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  id          String         @id @default(cuid())
+  lead        Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
   leadId      String
   fromStage   PipelineStage?
   toStage     PipelineStage
-  changedBy   User?         @relation(fields: [changedById], references: [id])
+  changedBy   User?          @relation(fields: [changedById], references: [id])
   changedById String?
-  createdAt   DateTime      @default(now())
+  createdAt   DateTime       @default(now())
 
   @@index([leadId])
 }
@@ -289,41 +314,41 @@ model PipelineHistory {
 // ─── Properties ─────────────────────────────────────────────────────
 
 model Property {
-  id           String             @id @default(cuid())
-  title        String
-  type         PropertyType
-  category     PropertyCategory
-  location     String
-  address      String?
-  areaSqft     Int?
-  bedrooms     Int?
-  bathrooms    Int?
-  furnishing   FurnishingStatus?
-  amenities    String[]           @default([])
-  price        Decimal            @db.Decimal(14, 2)
-  currency     String             @default("INR")
-  description  String?
-  videoUrl     String?
-  youtubeUrl   String?
-  latitude     Float?
-  longitude    Float?
-  status       AvailabilityStatus @default(AVAILABLE)
-  ownerName    String?
-  contactName  String?
-  contactPhone String?
-  assignedTo   User?              @relation(fields: [assignedToId], references: [id])
-  assignedToId String?
+  id             String             @id @default(cuid())
+  title          String
+  type           PropertyType
+  category       PropertyCategory
+  location       String
+  address        String?
+  areaSqft       Int?
+  bedrooms       Int?
+  bathrooms      Int?
+  furnishing     FurnishingStatus?
+  amenities      String[]           @default([])
+  price          Decimal            @db.Decimal(14, 2)
+  currency       String             @default("INR")
+  description    String?
+  videoUrl       String?
+  youtubeUrl     String?
+  latitude       Float?
+  longitude      Float?
+  status         AvailabilityStatus @default(AVAILABLE)
+  ownerName      String?
+  contactName    String?
+  contactPhone   String?
+  assignedTo     User?              @relation(fields: [assignedToId], references: [id])
+  assignedToId   String?
   // Set when this property is synced in from the public-facing website rather than
   // created directly in the CRM; used to upsert on repeat inbound syncs instead of duplicating.
-  externalId     String?   @unique
+  externalId     String?            @unique
   externalSource String?
   lastSyncedAt   DateTime?
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 
-  images       PropertyImage[]
-  matches      PropertyMatch[]
-  viewEvents   PropertyViewEvent[]
+  images     PropertyImage[]
+  matches    PropertyMatch[]
+  viewEvents PropertyViewEvent[]
 
   @@index([type])
   @@index([category])
@@ -358,16 +383,16 @@ model PropertyImage {
 
 // Shortlisted / matched properties saved against a lead
 model PropertyMatch {
-  id          String   @id @default(cuid())
-  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  leadId      String
-  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  propertyId  String
-  score       Int      @default(0)
-  savedBy     User?    @relation(fields: [savedById], references: [id])
-  savedById   String?
-  sharedViaWhatsApp Boolean @default(false)
-  createdAt   DateTime @default(now())
+  id                String   @id @default(cuid())
+  lead              Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId            String
+  property          Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  propertyId        String
+  score             Int      @default(0)
+  savedBy           User?    @relation(fields: [savedById], references: [id])
+  savedById         String?
+  sharedViaWhatsApp Boolean  @default(false)
+  createdAt         DateTime @default(now())
 
   @@unique([leadId, propertyId])
   @@index([leadId])
@@ -376,15 +401,19 @@ model PropertyMatch {
 // ─── WhatsApp ───────────────────────────────────────────────────────
 
 model WhatsAppTemplate {
-  id        String   @id @default(cuid())
-  key       String   @unique
+  id        String           @id @default(cuid())
+  key       String           @unique
   name      String
-  body      String   // supports {{placeholders}}
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  body      String // supports {{placeholders}}
+  audience  TemplateAudience @default(LEAD)
+  isActive  Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
-  logs WhatsAppLog[]
+  logs       WhatsAppLog[]
+  vendorLogs VendorWhatsAppLog[]
+
+  @@index([audience])
 }
 
 model WhatsAppLog {
@@ -449,6 +478,54 @@ model PartnerLeadShare {
   @@index([leadId])
   @@index([partnerId])
   @@index([status])
+}
+
+// ─── Vendors (property-sourcing pipeline) ────────────────────────────
+// A vendor is a property owner/agent we're sourcing inventory from — the mirror image
+// of a lead (who we sell to). Stage changes drive the same auto-WhatsApp pattern as
+// pipelineAutomation.service.ts does for leads, via vendorPipelineAutomation.service.ts.
+
+model Vendor {
+  id            String      @id @default(cuid())
+  name          String
+  contactPerson String?
+  phone         String?
+  whatsapp      String?
+  email         String?
+  city          String?
+  propertyTypes String? // free text — what this vendor typically supplies
+  notes         String?
+  stage         VendorStage @default(NEW)
+  siteVisitAt   DateTime? // set when moved to SITE_VISIT_SCHEDULED, feeds the {{date}}/{{time}} template vars
+  createdById   String?
+  createdBy     User?       @relation(fields: [createdById], references: [id])
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  logs VendorWhatsAppLog[]
+
+  @@index([stage])
+  @@index([createdAt])
+}
+
+model VendorWhatsAppLog {
+  id                String            @id @default(cuid())
+  vendor            Vendor            @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  vendorId          String
+  toNumber          String
+  template          WhatsAppTemplate? @relation(fields: [templateId], references: [id])
+  templateId        String?
+  body              String
+  sentBy            User              @relation(fields: [sentById], references: [id])
+  sentById          String
+  status            MessageStatus     @default(QUEUED)
+  providerMessageId String?
+  error             String?
+  createdAt         DateTime          @default(now())
+
+  @@index([vendorId])
+  @@index([sentById])
+  @@index([createdAt])
 }
 
 // ─── Notifications & Settings ───────────────────────────────────────

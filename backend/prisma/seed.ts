@@ -115,6 +115,50 @@ async function main() {
       name: "Registration testimonial & referral (auto)",
       body: "Congratulations {{name}} on your new home! 🎉 We'd be grateful for a short testimonial, and if you know anyone else house-hunting, we'd love an introduction. — {{agent}}",
     },
+    // Vendor-side templates (property-sourcing pipeline) — audience: VENDOR, distinct
+    // placeholders from the lead-side templates above.
+    {
+      key: "vendor_property_request",
+      name: "New Property Requirement",
+      audience: "VENDOR" as const,
+      body: "Hi {{vendor_name}} 👋\n\nHope you're doing well.\n\nWe currently have a client looking for a property with the following requirements:\n\n📍 Location : {{location}}\n🏡 Property Type : {{property_type}}\n💰 Budget : {{budget}}\n📐 Size : {{size}}\n\nIf you have any matching properties, please share the complete details along with:\n\n• Photos & Videos\n• Exact Location\n• Expected Price\n• Property Documents (if available)\n\nWe'll review and get back to you if it matches our requirement.\n\nThank you.\nTeam Thanjai Property",
+    },
+    {
+      key: "vendor_more_details",
+      name: "Need More Details",
+      audience: "VENDOR" as const,
+      body: "Hi {{vendor_name}}\n\nThank you for sharing the property.\n\nTo evaluate it further, could you please send:\n\n✅ More Photos\n✅ Walkthrough Video\n✅ Google Map Location\n✅ Patta / Chitta (if available)\n✅ Final Asking Price\n✅ Commission Details\n\nOnce received, we'll proceed with the next step.\n\nThank you.",
+    },
+    {
+      key: "vendor_shortlisted",
+      name: "Property Shortlisted",
+      audience: "VENDOR" as const,
+      body: "Hi {{vendor_name}}\n\nGood news!\n\nOne of your properties has been shortlisted for further discussion.\n\nPlease keep the property available for the next few days. We'll update you shortly regarding the site visit.\n\nThank you.\nTeam Thanjai Property",
+    },
+    {
+      key: "vendor_site_visit",
+      name: "Site Visit Coordination",
+      audience: "VENDOR" as const,
+      body: "Hi {{vendor_name}}\n\nWe'd like to arrange a site visit for one of the interested parties.\n\nCould you please confirm your availability on:\n\n📅 {{date}}\n🕒 {{time}}\n\nKindly share the exact meeting location as well.\n\nThank you.",
+    },
+    {
+      key: "vendor_negotiation",
+      name: "Price Negotiation",
+      audience: "VENDOR" as const,
+      body: "Hi {{vendor_name}}\n\nOur client is interested in the property.\n\nBefore proceeding further, could you please let us know your best possible final price?\n\nThis will help us move the discussion forward quickly.\n\nLooking forward to your response.",
+    },
+    {
+      key: "vendor_availability",
+      name: "Property Sold Elsewhere?",
+      audience: "VENDOR" as const,
+      body: "Hi {{vendor_name}}\n\nJust checking whether the property is still available.\n\nIf it has been sold already, please let us know so we can update our records.\n\nThank you.",
+    },
+    {
+      key: "vendor_thank_you",
+      name: "Thank You",
+      audience: "VENDOR" as const,
+      body: "Thank you for working with Thanjai Property.\n\nWe appreciate your support and look forward to many successful deals together.\n\nWe'll keep sharing genuine property requirements whenever they match your listings.",
+    },
   ];
   for (const t of templates) {
     await prisma.whatsAppTemplate.upsert({ where: { key: t.key }, update: { body: t.body }, create: t });

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, downloadFile, resolveMediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Badge, Button, Card, ErrorBanner, Field, Input, Modal, PageHeader, Spinner, Textarea } from "@/components/ui";
+import { Badge, Button, Card, ErrorBanner, Field, Input, Modal, PageHeader, Select, Spinner, Textarea } from "@/components/ui";
 import { DownloadIcon, SettingsIcon, UploadCloudIcon } from "@/components/icons";
 import IntegrationsPanel from "@/components/IntegrationsPanel";
 import { applyBrandColor } from "@/lib/brandColor";
@@ -15,10 +15,11 @@ interface Template {
   key: string;
   name: string;
   body: string;
+  audience: "LEAD" | "VENDOR";
   isActive: boolean;
 }
 
-const emptyTemplate = { key: "", name: "", body: "", isActive: true };
+const emptyTemplate = { key: "", name: "", body: "", audience: "LEAD" as const, isActive: true };
 
 export default function SettingsPage() {
   const { hasRole } = useAuth();
@@ -29,7 +30,7 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Template | null>(null);
-  const [form, setForm] = useState({ ...emptyTemplate });
+  const [form, setForm] = useState<Omit<Template, "id">>({ ...emptyTemplate });
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<"templates" | "branding" | "integrations">("templates");
   const [branding, setBranding] = useState({ ...emptyBranding });
@@ -38,7 +39,7 @@ export default function SettingsPage() {
 
   const load = useCallback(() => {
     setError(null);
-    api.get<{ data: Template[] }>("/whatsapp/templates").then((r) => setTemplates(r.data)).catch((e) => {
+    api.get<{ data: Template[] }>("/whatsapp/templates?audience=all").then((r) => setTemplates(r.data)).catch((e) => {
       setTemplates([]);
       setError(e instanceof Error ? e.message : "Could not load WhatsApp templates");
     });
@@ -54,7 +55,7 @@ export default function SettingsPage() {
 
   function openForm(t?: Template) {
     setEditing(t ?? null);
-    setForm(t ? { key: t.key, name: t.name, body: t.body, isActive: t.isActive } : { ...emptyTemplate });
+    setForm(t ? { key: t.key, name: t.name, body: t.body, audience: t.audience, isActive: t.isActive } : { ...emptyTemplate });
     setShowForm(true);
   }
 
@@ -216,8 +217,8 @@ export default function SettingsPage() {
               <div>
                 <h3 className="text-sm font-semibold">WhatsApp templates</h3>
                 <p className="text-xs text-slate-500">
-                  Placeholders: {"{{name}}"}, {"{{agent}}"}, {"{{properties}}"}, {"{{time}}"} (automation templates).
-                  Keys <code className="rounded bg-slate-100 px-1">initial_contact_intro</code>, <code className="rounded bg-slate-100 px-1">follow_up</code>, <code className="rounded bg-slate-100 px-1">site_visit_before</code>, <code className="rounded bg-slate-100 px-1">site_visit_feedback</code>, <code className="rounded bg-slate-100 px-1">negotiation_update</code>, <code className="rounded bg-slate-100 px-1">bank_loan_assist</code>, and <code className="rounded bg-slate-100 px-1">registration_testimonial</code> fire automatically on stage changes.
+                  Client templates use {"{{name}}"}, {"{{agent}}"}, {"{{properties}}"}, {"{{time}}"}. Keys <code className="rounded bg-slate-100 px-1">initial_contact_intro</code>, <code className="rounded bg-slate-100 px-1">follow_up</code>, <code className="rounded bg-slate-100 px-1">site_visit_before</code>, <code className="rounded bg-slate-100 px-1">site_visit_feedback</code>, <code className="rounded bg-slate-100 px-1">negotiation_update</code>, <code className="rounded bg-slate-100 px-1">bank_loan_assist</code>, and <code className="rounded bg-slate-100 px-1">registration_testimonial</code> fire automatically on lead stage changes.
+                  Vendor templates use {"{{vendor_name}}"}, {"{{location}}"}, {"{{property_type}}"}, {"{{budget}}"}, {"{{size}}"}, {"{{date}}"}, {"{{time}}"}. Keys <code className="rounded bg-slate-100 px-1">vendor_property_request</code>, <code className="rounded bg-slate-100 px-1">vendor_more_details</code>, <code className="rounded bg-slate-100 px-1">vendor_shortlisted</code>, <code className="rounded bg-slate-100 px-1">vendor_site_visit</code>, <code className="rounded bg-slate-100 px-1">vendor_negotiation</code>, and <code className="rounded bg-slate-100 px-1">vendor_thank_you</code> fire automatically on vendor stage changes; <code className="rounded bg-slate-100 px-1">vendor_availability</code> is manual-only.
                 </p>
               </div>
               <div className="flex shrink-0 gap-2">
@@ -225,21 +226,32 @@ export default function SettingsPage() {
                 {canEdit && <Button size="sm" onClick={() => openForm()}>+ New template</Button>}
               </div>
             </div>
-            <div className="divide-y divide-slate-100">
-              {templates.map((t) => (
-                <div key={t.id} className="flex items-start justify-between gap-3 px-4 py-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-medium">{t.name}</span>
-                      <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-500">{t.key}</code>
-                      <Badge value={t.isActive ? "ACTIVE" : "INACTIVE"} />
-                    </div>
-                    <p className="mt-1 line-clamp-2 whitespace-pre-wrap text-xs text-slate-500">{t.body}</p>
+            {(["LEAD", "VENDOR"] as const).map((audience) => {
+              const group = templates.filter((t) => t.audience === audience);
+              if (group.length === 0) return null;
+              return (
+                <div key={audience}>
+                  <div className="bg-slate-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    {audience === "LEAD" ? "Client templates" : "Vendor templates"}
                   </div>
-                  {canEdit && <Button variant="secondary" size="sm" onClick={() => openForm(t)}>Edit</Button>}
+                  <div className="divide-y divide-slate-100">
+                    {group.map((t) => (
+                      <div key={t.id} className="flex items-start justify-between gap-3 px-4 py-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-medium">{t.name}</span>
+                            <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-500">{t.key}</code>
+                            <Badge value={t.isActive ? "ACTIVE" : "INACTIVE"} />
+                          </div>
+                          <p className="mt-1 line-clamp-2 whitespace-pre-wrap text-xs text-slate-500">{t.body}</p>
+                        </div>
+                        {canEdit && <Button variant="secondary" size="sm" onClick={() => openForm(t)}>Edit</Button>}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </Card>
 
           {hasRole() && (
@@ -264,6 +276,12 @@ export default function SettingsPage() {
               <Input required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
             </Field>
           </div>
+          <Field label="Sent to *">
+            <Select value={form.audience} onChange={(e) => setForm((f) => ({ ...f, audience: e.target.value as "LEAD" | "VENDOR" }))}>
+              <option value="LEAD">Clients ({"{{name}}"}, {"{{agent}}"}, {"{{properties}}"})</option>
+              <option value="VENDOR">Vendors ({"{{vendor_name}}"}, {"{{location}}"}, {"{{budget}}"}, etc.)</option>
+            </Select>
+          </Field>
           <Field label="Message body *">
             <Textarea rows={6} required value={form.body} onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))} />
           </Field>
