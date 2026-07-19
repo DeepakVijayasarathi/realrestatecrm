@@ -120,8 +120,11 @@ router.post("/:id/change-stage", requireRole(Role.SALES_MANAGER, Role.SALES_EXEC
 
     const extraVars = { ...templateVars };
     if (siteVisitAt) {
-      extraVars.date = siteVisitAt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
-      extraVars.time = siteVisitAt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+      // Explicit timeZone, not just the "en-IN" locale (which only affects formatting
+      // style, not which timezone the hour/date come from) — otherwise this silently
+      // follows whatever the server process's ambient timezone happens to be.
+      extraVars.date = siteVisitAt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" });
+      extraVars.time = siteVisitAt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" });
     }
     await runVendorStageAutomation(vendor, stage, { id: req.user!.id, name: req.user!.name }, extraVars);
 

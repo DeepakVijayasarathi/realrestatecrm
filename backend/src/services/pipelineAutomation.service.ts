@@ -37,8 +37,11 @@ export async function runStageAutomation(lead: Lead, toStage: PipelineStage, age
     const toNumber = lead.whatsappNumber || lead.mobile;
     if (!toNumber) return;
 
+    // Explicit timeZone — "en-IN" only controls formatting style, not which timezone
+    // the hour/date are read from, so without this it silently follows whatever the
+    // server process's ambient timezone happens to be instead of the business's (India).
     const scheduledTime = lead.followUpAt
-      ? lead.followUpAt.toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+      ? lead.followUpAt.toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" })
       : "a time to be confirmed with your agent";
 
     const body = renderTemplate(template.body, {
