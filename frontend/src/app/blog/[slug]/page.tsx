@@ -15,12 +15,23 @@ async function getPost(slug: string): Promise<BlogPost | null> {
   }
 }
 
+async function getBrandName(): Promise<string> {
+  try {
+    const res = await fetch(`${API_URL}/settings/branding/public`, { next: { revalidate: 300 } });
+    if (!res.ok) return "Thanjai Property";
+    const json = (await res.json()) as { data?: { appName?: string } };
+    return json.data?.appName || "Thanjai Property";
+  } catch {
+    return "Thanjai Property";
+  }
+}
+
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const post = await getPost(params.slug);
-  if (!post) return { title: "Post not found — RealRest" };
+  const [post, brandName] = await Promise.all([getPost(params.slug), getBrandName()]);
+  if (!post) return { title: `Post not found — ${brandName}` };
   const description = post.excerpt || post.body.replace(/\s+/g, " ").slice(0, 160);
   return {
-    title: `${post.title} — RealRest`,
+    title: `${post.title} — ${brandName}`,
     description,
     openGraph: {
       title: post.title,

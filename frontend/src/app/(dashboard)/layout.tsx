@@ -194,7 +194,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ))}
         </nav>
         <div className="border-t border-white/10 p-4 text-[11px] text-slate-500">
-          © {new Date().getFullYear()} RealRest
+          © {new Date().getFullYear()} {branding.appName}
         </div>
       </aside>
       {menuOpen && <div className="fixed inset-0 z-30 bg-slate-900/30 lg:hidden" onClick={() => setMenuOpen(false)} />}

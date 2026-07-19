@@ -95,14 +95,20 @@ class Msg91Provider implements WhatsAppProvider {
  *
  * Template to submit for Meta approval (in Meta Business Manager → WhatsApp Manager
  * → Message Templates, or wherever SmartPing's dashboard forwards the request to):
- *   Name:     realrest_notification
+ *   Name:     thanjai_property_notification
  *   Category: UTILITY
  *   Language: English (en_US)
- *   Body:     *RealRest CRM*
+ *   Body:     *Thanjai Property*
  *
  *             {{1}}
  *
- *             _Sent via RealRest CRM_
+ *             _Sent via Thanjai Property_
+ *
+ * NOTE: the template actually approved and live today still says "RealRest CRM" in its
+ * static header/footer — that text is baked into the already-approved template on Meta's
+ * side and can't be edited from this codebase. It only changes once a new template using
+ * the name above is submitted, approved, and the SmartPing campaign name in Settings is
+ * repointed at it.
  * (Type this with real Enter/line-break presses in the template composer — WhatsApp
  * templates are plain text, not HTML, so a literal "<br>" shows up as those four
  * characters in the delivered message instead of a line break. Meta/WhatsApp templates

@@ -63,7 +63,7 @@ export const env = {
     port: Number(process.env.SMTP_PORT || 587),
     user: process.env.SMTP_USER || "",
     pass: process.env.SMTP_PASS || "",
-    from: process.env.MAIL_FROM || "RealRest CRM <noreply@realrest.example>",
+    from: process.env.MAIL_FROM || "Thanjai Property CRM <noreply@realrest.example>",
   },
   clientUrl: (process.env.CLIENT_URL || "").replace(/\/$/, ""),
   // Bi-directional sync with the public marketing website's property catalog.

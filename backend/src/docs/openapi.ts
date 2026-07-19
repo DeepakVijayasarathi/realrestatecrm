@@ -13,10 +13,10 @@ function crud(tag: string, singular: string) {
 export const openApiSpec = {
   openapi: "3.0.3",
   info: {
-    title: "RealRest CRM API",
+    title: "Thanjai Property CRM API",
     version: "1.0.0",
     description:
-      "REST API for the RealRest real estate + visa lead CRM. Authenticate via POST /auth/login, then send the token as `Authorization: Bearer <token>`.",
+      "REST API for the Thanjai Property real estate + visa lead CRM. Authenticate via POST /auth/login, then send the token as `Authorization: Bearer <token>`.",
   },
   servers: [{ url: "/api" }],
   components: {
