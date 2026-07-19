@@ -83,7 +83,12 @@ async function askGemini(settings: OpenAiSettings, messages: ChatMessage[]): Pro
   });
   const data = (await res.json()) as {
     candidates?: { content?: { parts?: { text?: string }[] } }[];
-    usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number };
+    usageMetadata?: {
+      promptTokenCount?: number;
+      candidatesTokenCount?: number;
+      thoughtsTokenCount?: number;
+      totalTokenCount?: number;
+    };
     error?: { message: string };
   };
   if (!res.ok || data.error) {
@@ -93,7 +98,11 @@ async function askGemini(settings: OpenAiSettings, messages: ChatMessage[]): Pro
   if (!text) throw badRequest("AI returned an empty response");
 
   const promptTokens = data.usageMetadata?.promptTokenCount ?? 0;
-  const completionTokens = data.usageMetadata?.candidatesTokenCount ?? 0;
+  // Thinking-enabled Gemini models (2.5+/3.x) bill a "thoughts" token count that's part of
+  // totalTokenCount but excluded from candidatesTokenCount — folding it into
+  // completionTokens (thoughts are billed at the output rate) is what makes the cost
+  // estimate below match totalTokenCount instead of silently missing most of the bill.
+  const completionTokens = (data.usageMetadata?.candidatesTokenCount ?? 0) + (data.usageMetadata?.thoughtsTokenCount ?? 0);
   return {
     text,
     model: settings.geminiModel,
