@@ -34,6 +34,21 @@ interface Match {
 
 interface Template { id: string; key: string; name: string; body: string; isActive: boolean }
 
+function bubbleTime(iso: string) {
+  return new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+}
+
+/** WhatsApp's own tick language: single grey = sent, double grey = delivered,
+ * double blue = read, red mark = failed — matched here so the status reads the same
+ * way staff already expect from the WhatsApp app itself. */
+function StatusTicks({ status }: { status: string }) {
+  if (status === "FAILED") return <span className="text-red-500" title="Failed">!</span>;
+  if (status === "QUEUED") return <span className="text-slate-400" title="Queued">🕐</span>;
+  const color = status === "READ" ? "text-sky-500" : "text-slate-400";
+  const ticks = status === "SENT" ? "✓" : "✓✓";
+  return <span className={color} title={labelize(status)}>{ticks}</span>;
+}
+
 export default function LeadDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user, hasRole } = useAuth();
@@ -519,32 +534,34 @@ export default function LeadDetailPage() {
                 </ol>
               )}
               {tab === "whatsapp" && (
-                <div className="space-y-3">
-                  {conversation.map((entry) =>
-                    entry.direction === "out" ? (
-                      <div key={entry.id} className="ml-auto max-w-[85%] rounded-lg rounded-tr-sm border border-brand-100 bg-brand-50 p-3">
-                        <div className="mb-1 flex items-center justify-between gap-2">
-                          <span className="text-xs text-slate-500">
-                            by {entry.meta.sentBy.name} · {fmtDate(entry.createdAt, true)}
-                            {entry.meta.template && ` · template: ${entry.meta.template.name}`}
-                          </span>
-                          <span className="flex shrink-0 items-center gap-1 text-xs text-slate-400">Delivery: <Badge value={entry.meta.status} /></span>
+                <div className="-m-4 flex flex-col bg-[#e5ddd5] p-4">
+                  <div className="space-y-1.5">
+                    {conversation.map((entry) =>
+                      entry.direction === "out" ? (
+                        <div key={entry.id} className="ml-auto max-w-[85%] rounded-lg rounded-tr-none bg-[#dcf8c6] px-3 py-1.5 shadow-sm">
+                          {entry.meta.template && (
+                            <p className="text-[11px] font-medium text-emerald-700/70">template: {entry.meta.template.name}</p>
+                          )}
+                          <p className="whitespace-pre-wrap text-sm text-slate-800">{entry.body}</p>
+                          <p className="mt-0.5 flex items-center justify-end gap-1 text-[10px] text-slate-500">
+                            {bubbleTime(entry.createdAt)}
+                            <StatusTicks status={entry.meta.status} />
+                          </p>
                         </div>
-                        <p className="whitespace-pre-wrap text-sm text-slate-700">{entry.body}</p>
-                      </div>
-                    ) : (
-                      <div key={entry.id} className="mr-auto max-w-[85%] rounded-lg rounded-tl-sm border border-slate-200 bg-white p-3">
-                        <div className="mb-1 text-xs text-slate-500">
-                          From {entry.meta.fromNumber} · {fmtDate(entry.createdAt, true)}
-                          {entry.meta.autoRepliedAt && " · auto-replied"}
+                      ) : (
+                        <div key={entry.id} className="mr-auto max-w-[85%] rounded-lg rounded-tl-none bg-white px-3 py-1.5 shadow-sm">
+                          <p className="whitespace-pre-wrap text-sm text-slate-800">{entry.body}</p>
+                          <p className="mt-0.5 flex items-center justify-end gap-1 text-[10px] text-slate-400">
+                            {entry.meta.autoRepliedAt && <span>auto-replied ·</span>}
+                            {bubbleTime(entry.createdAt)}
+                          </p>
                         </div>
-                        <p className="whitespace-pre-wrap text-sm text-slate-700">{entry.body}</p>
-                      </div>
-                    )
-                  )}
-                  {conversation.length === 0 && <p className="text-sm text-slate-400">No WhatsApp messages yet.</p>}
+                      )
+                    )}
+                    {conversation.length === 0 && <p className="text-center text-sm text-slate-500">No WhatsApp messages yet.</p>}
+                  </div>
                   {!isPartner && (
-                    <form onSubmit={sendReply} className="sticky bottom-0 mt-2 flex gap-2 border-t border-slate-200 bg-white pt-3">
+                    <form onSubmit={sendReply} className="sticky bottom-0 mt-3 flex gap-2">
                       <Input
                         placeholder="Type a reply…"
                         value={replyText}
