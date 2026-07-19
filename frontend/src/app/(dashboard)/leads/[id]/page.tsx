@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { api, resolveMediaUrl } from "@/lib/api";
@@ -36,6 +36,22 @@ interface Template { id: string; key: string; name: string; body: string; isActi
 
 function bubbleTime(iso: string) {
   return new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+}
+
+function sameDay(a: string, b: string) {
+  return new Date(a).toDateString() === new Date(b).toDateString();
+}
+
+/** WhatsApp-style day chip between messages from different days — bubbles only carry a
+ * time, so without these a multi-day conversation loses all date information. */
+function dayLabel(iso: string) {
+  const d = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return "Today";
+  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 }
 
 /** WhatsApp's own tick language: single grey = sent, double grey = delivered,
@@ -104,6 +120,27 @@ export default function LeadDetailPage() {
       return null;
     }
   }, [id]);
+
+  // Chat behaviors for the WhatsApp tab:
+  //  - Poll while it's open so a client's reply appears without a manual page reload
+  //    (same 20s cadence the pipeline board uses). Only while open — no point refreshing
+  //    a conversation nobody is looking at.
+  //  - Keep the view pinned to the newest message: scroll to bottom when the tab opens
+  //    and again when a new message arrives. Message count (not the whole lead object)
+  //    is the dependency, so a poll that brings nothing new doesn't yank the scroll
+  //    position away from someone reading older history.
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const conversationCount = lead ? lead.whatsappLogs.length + lead.inboundMessages.length : 0;
+  useEffect(() => {
+    if (tab !== "whatsapp") return;
+    const t = setInterval(load, 20_000);
+    return () => clearInterval(t);
+  }, [tab, load]);
+  useEffect(() => {
+    if (tab !== "whatsapp") return;
+    const el = chatScrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [tab, conversationCount]);
 
   useEffect(() => {
     load();
@@ -515,7 +552,7 @@ export default function LeadDetailPage() {
                 </button>
               ))}
             </div>
-            <div className="max-h-96 overflow-y-auto p-4">
+            <div ref={chatScrollRef} className="max-h-96 overflow-y-auto p-4">
               {tab === "timeline" && (
                 <ol className="space-y-3">
                   {lead.activities.map((a) => {
@@ -536,28 +573,37 @@ export default function LeadDetailPage() {
               {tab === "whatsapp" && (
                 <div className="-m-4 flex flex-col bg-[#e5ddd5] p-4">
                   <div className="space-y-1.5">
-                    {conversation.map((entry) =>
-                      entry.direction === "out" ? (
-                        <div key={entry.id} className="ml-auto max-w-[85%] rounded-lg rounded-tr-none bg-[#dcf8c6] px-3 py-1.5 shadow-sm">
-                          {entry.meta.template && (
-                            <p className="text-[11px] font-medium text-emerald-700/70">template: {entry.meta.template.name}</p>
-                          )}
-                          <p className="whitespace-pre-wrap text-sm text-slate-800">{entry.body}</p>
-                          <p className="mt-0.5 flex items-center justify-end gap-1 text-[10px] text-slate-500">
-                            {bubbleTime(entry.createdAt)}
-                            <StatusTicks status={entry.meta.status} />
-                          </p>
-                        </div>
-                      ) : (
-                        <div key={entry.id} className="mr-auto max-w-[85%] rounded-lg rounded-tl-none bg-white px-3 py-1.5 shadow-sm">
-                          <p className="whitespace-pre-wrap text-sm text-slate-800">{entry.body}</p>
-                          <p className="mt-0.5 flex items-center justify-end gap-1 text-[10px] text-slate-400">
-                            {entry.meta.autoRepliedAt && <span>auto-replied ·</span>}
-                            {bubbleTime(entry.createdAt)}
-                          </p>
-                        </div>
-                      )
-                    )}
+                    {conversation.map((entry, i) => (
+                      <Fragment key={entry.id}>
+                        {(i === 0 || !sameDay(conversation[i - 1].createdAt, entry.createdAt)) && (
+                          <div className="flex justify-center py-1.5">
+                            <span className="rounded-lg bg-white/80 px-2.5 py-0.5 text-[11px] font-medium text-slate-500 shadow-sm">
+                              {dayLabel(entry.createdAt)}
+                            </span>
+                          </div>
+                        )}
+                        {entry.direction === "out" ? (
+                          <div className="ml-auto max-w-[85%] rounded-lg rounded-tr-none bg-[#dcf8c6] px-3 py-1.5 shadow-sm">
+                            {entry.meta.template && (
+                              <p className="text-[11px] font-medium text-emerald-700/70">template: {entry.meta.template.name}</p>
+                            )}
+                            <p className="whitespace-pre-wrap text-sm text-slate-800">{entry.body}</p>
+                            <p className="mt-0.5 flex items-center justify-end gap-1 text-[10px] text-slate-500">
+                              {bubbleTime(entry.createdAt)}
+                              <StatusTicks status={entry.meta.status} />
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="mr-auto max-w-[85%] rounded-lg rounded-tl-none bg-white px-3 py-1.5 shadow-sm">
+                            <p className="whitespace-pre-wrap text-sm text-slate-800">{entry.body}</p>
+                            <p className="mt-0.5 flex items-center justify-end gap-1 text-[10px] text-slate-400">
+                              {entry.meta.autoRepliedAt && <span>auto-replied ·</span>}
+                              {bubbleTime(entry.createdAt)}
+                            </p>
+                          </div>
+                        )}
+                      </Fragment>
+                    ))}
                     {conversation.length === 0 && <p className="text-center text-sm text-slate-500">No WhatsApp messages yet.</p>}
                   </div>
                   {!isPartner && (
