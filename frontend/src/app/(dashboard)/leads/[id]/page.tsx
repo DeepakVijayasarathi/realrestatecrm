@@ -282,7 +282,9 @@ export default function LeadDetailPage() {
       const res = await api.post<{ message?: string }>(`/leads/${id}/send-whatsapp`, { customMessage: body });
       setReplyText("");
       await load();
-      if (res.message) toast(res.message);
+      // A plain successful send has no `message` in the response (only failures/warnings
+      // do) — without a fallback here, sending a reply showed no confirmation at all.
+      toast(res.message ?? "Message sent");
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Send failed");
     } finally {
