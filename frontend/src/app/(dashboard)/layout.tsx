@@ -16,6 +16,7 @@ import {
   BuildingIcon,
   CalendarIcon,
   FileTextIcon,
+  HelpCircleIcon,
   KanbanIcon,
   LayoutDashboardIcon,
   LogOutIcon,
@@ -44,6 +45,7 @@ const NAV_SECTIONS = [
     title: "Core Operations",
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboardIcon, roles: null },
+      { href: "/how-to-use", label: "How to Use", icon: HelpCircleIcon, roles: null },
       { href: "/leads", label: "CRM pipeline", icon: UsersIcon, roles: ["SALES_MANAGER", "SALES_EXECUTIVE", "PARTNER_USER"] },
       { href: "/properties", label: "Properties Inventory", icon: BuildingIcon, roles: null },
       { href: "/partners", label: "Partner Network", icon: BriefcaseIcon, roles: ["SALES_MANAGER", "SALES_EXECUTIVE", "PARTNER_USER"] },
