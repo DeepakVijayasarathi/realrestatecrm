@@ -12,6 +12,7 @@ import { getIntegrationSettings } from "../../services/integrationSettings.servi
 import { verifyMetaSignature } from "../../lib/webhookAuth";
 import { sendWhatsApp } from "../../services/whatsapp.service";
 import { notify } from "../../services/notification.service";
+import { getBrandName } from "../../services/branding.service";
 
 const router = Router();
 
@@ -132,8 +133,10 @@ function normalizePhone(raw: string): string {
   return raw.replace(/\D/g, "").slice(-10);
 }
 
-const AUTO_REPLY_BODY =
-  "Hi! Thanks for reaching out to Thanjai Property.\nWe've received your message and our team will get back to you shortly.";
+async function autoReplyBody() {
+  const brandName = await getBrandName();
+  return `Hi! Thanks for reaching out to ${brandName}.\nWe've received your message and our team will get back to you shortly.`;
+}
 
 async function handleInboundMessages(events: InboundEvent[]) {
   if (!events.length) return;
@@ -173,12 +176,13 @@ async function handleInboundMessages(events: InboundEvent[]) {
 
     const sentById = lead.assignedToId ?? lead.createdById;
     if (sentById) {
-      const result = await sendWhatsApp(e.from, AUTO_REPLY_BODY, undefined);
+      const replyBody = await autoReplyBody();
+      const result = await sendWhatsApp(e.from, replyBody, undefined);
       await prisma.whatsAppLog.create({
         data: {
           leadId: lead.id,
           toNumber: e.from,
-          body: AUTO_REPLY_BODY,
+          body: replyBody,
           sentById,
           status: result.status,
           providerMessageId: result.providerMessageId,
