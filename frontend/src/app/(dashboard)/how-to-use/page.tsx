@@ -34,6 +34,7 @@ const SECTIONS: Section[] = [
       "The \"WhatsApp\" tab on a lead's page shows the full conversation, chat-style — your messages on the right, the client's replies on the left, with sent/delivered/read ticks.",
       "You can type directly into the box at the bottom of that conversation to reply immediately, without opening the separate Send box.",
       "The \"WhatsApp Log\" page (left sidebar) shows every message sent across all leads, with filters and a CSV export for managers.",
+      "The instant a lead replies, an automatic acknowledgement goes out (\"Thanks for reaching out, our team will get back to you shortly\") and the assigned exec plus every Super Admin get notified. Edit that message under Settings → Templates → Client templates, key lead_auto_reply.",
       "Client replies currently only appear if your WhatsApp provider (AiSensy/SmartPing) has webhooks enabled on your account — ask your admin if you're not seeing replies show up.",
     ],
   },

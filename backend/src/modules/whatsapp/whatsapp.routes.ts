@@ -10,7 +10,7 @@ import { toCsv } from "../../lib/csv";
 import { audit } from "../../services/audit.service";
 import { getIntegrationSettings } from "../../services/integrationSettings.service";
 import { verifyMetaSignature } from "../../lib/webhookAuth";
-import { sendWhatsApp } from "../../services/whatsapp.service";
+import { renderTemplate, sendWhatsApp } from "../../services/whatsapp.service";
 import { notify } from "../../services/notification.service";
 import { getBrandName } from "../../services/branding.service";
 
@@ -133,8 +133,17 @@ function normalizePhone(raw: string): string {
   return raw.replace(/\D/g, "").slice(-10);
 }
 
-async function autoReplyBody() {
+/** Manager-editable via Settings > Templates > Client (key: lead_auto_reply) — falls back
+ * to a sensible default if none is configured, same pattern as the partner_referral
+ * template, so this keeps working exactly as before for anyone who hasn't set one up. */
+async function autoReplyBody(leadName: string) {
   const brandName = await getBrandName();
+  const template = await prisma.whatsAppTemplate.findFirst({
+    where: { audience: "LEAD", isActive: true, key: "lead_auto_reply" },
+  });
+  if (template) {
+    return renderTemplate(template.body, { brand: brandName, name: leadName });
+  }
   return `Hi! Thanks for reaching out to ${brandName}.\nWe've received your message and our team will get back to you shortly.`;
 }
 
@@ -176,7 +185,7 @@ async function handleInboundMessages(events: InboundEvent[]) {
 
     const sentById = lead.assignedToId ?? lead.createdById;
     if (sentById) {
-      const replyBody = await autoReplyBody();
+      const replyBody = await autoReplyBody(lead.fullName);
       const result = await sendWhatsApp(e.from, replyBody, undefined);
       await prisma.whatsAppLog.create({
         data: {
