@@ -15,7 +15,7 @@ interface Template {
   key: string;
   name: string;
   body: string;
-  audience: "LEAD" | "VENDOR" | "PARTNER";
+  audience: "LEAD" | "PARTNER";
   isActive: boolean;
 }
 
@@ -218,7 +218,6 @@ export default function SettingsPage() {
                 <h3 className="text-sm font-semibold">WhatsApp templates</h3>
                 <p className="text-xs text-slate-500">
                   Client templates use {"{{name}}"}, {"{{agent}}"}, {"{{properties}}"}, {"{{time}}"}. Keys <code className="rounded bg-slate-100 px-1">initial_contact_intro</code>, <code className="rounded bg-slate-100 px-1">follow_up</code>, <code className="rounded bg-slate-100 px-1">site_visit_before</code>, <code className="rounded bg-slate-100 px-1">site_visit_feedback</code>, <code className="rounded bg-slate-100 px-1">negotiation_update</code>, <code className="rounded bg-slate-100 px-1">bank_loan_assist</code>, and <code className="rounded bg-slate-100 px-1">registration_testimonial</code> fire automatically on lead stage changes.
-                  Vendor templates use {"{{vendor_name}}"}, {"{{location}}"}, {"{{property_type}}"}, {"{{budget}}"}, {"{{size}}"}, {"{{date}}"}, {"{{time}}"}. Keys <code className="rounded bg-slate-100 px-1">vendor_property_request</code>, <code className="rounded bg-slate-100 px-1">vendor_more_details</code>, <code className="rounded bg-slate-100 px-1">vendor_shortlisted</code>, <code className="rounded bg-slate-100 px-1">vendor_site_visit</code>, <code className="rounded bg-slate-100 px-1">vendor_negotiation</code>, and <code className="rounded bg-slate-100 px-1">vendor_thank_you</code> fire automatically on vendor stage changes; <code className="rounded bg-slate-100 px-1">vendor_availability</code> is manual-only.
                   Partner templates use {"{{partner_name}}"}, {"{{lead_name}}"}, {"{{location}}"}, {"{{property_type}}"}, {"{{budget}}"}, {"{{notes}}"}, {"{{properties}}"}, {"{{brand}}"}, {"{{agent}}"}. Only the key <code className="rounded bg-slate-100 px-1">partner_referral</code> is used — it fires when a lead is shared to a partner company with &ldquo;Send WhatsApp&rdquo; checked; without one, a built-in default message is sent instead.
                 </p>
               </div>
@@ -227,13 +226,13 @@ export default function SettingsPage() {
                 {canEdit && <Button size="sm" onClick={() => openForm()}>+ New template</Button>}
               </div>
             </div>
-            {(["LEAD", "VENDOR", "PARTNER"] as const).map((audience) => {
+            {(["LEAD", "PARTNER"] as const).map((audience) => {
               const group = templates.filter((t) => t.audience === audience);
               if (group.length === 0) return null;
               return (
                 <div key={audience}>
                   <div className="bg-slate-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    {audience === "LEAD" ? "Client templates" : audience === "VENDOR" ? "Vendor templates" : "Partner templates"}
+                    {audience === "LEAD" ? "Client templates" : "Partner templates"}
                   </div>
                   <div className="divide-y divide-slate-100">
                     {group.map((t) => (
@@ -278,9 +277,8 @@ export default function SettingsPage() {
             </Field>
           </div>
           <Field label="Sent to *">
-            <Select value={form.audience} onChange={(e) => setForm((f) => ({ ...f, audience: e.target.value as "LEAD" | "VENDOR" | "PARTNER" }))}>
+            <Select value={form.audience} onChange={(e) => setForm((f) => ({ ...f, audience: e.target.value as "LEAD" | "PARTNER" }))}>
               <option value="LEAD">Clients ({"{{name}}"}, {"{{agent}}"}, {"{{properties}}"})</option>
-              <option value="VENDOR">Vendors ({"{{vendor_name}}"}, {"{{location}}"}, {"{{budget}}"}, etc.)</option>
               <option value="PARTNER">Partners ({"{{partner_name}}"}, {"{{lead_name}}"}, {"{{properties}}"}, etc.)</option>
             </Select>
           </Field>

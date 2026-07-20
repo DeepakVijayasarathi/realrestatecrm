@@ -42,7 +42,7 @@ const partnerSchema = z.object({
 router.get("/", async (req, res, next) => {
   try {
     // Same rationale as isSalesStaff() above — property staff have no legitimate reason
-    // to see vendor contact/notes data either.
+    // to see partner contact/notes data either.
     if (req.user!.role !== Role.PARTNER_USER && !isSalesStaff(req.user!.role)) throw forbidden();
     // Partner users only see their own company
     const where =
@@ -53,7 +53,7 @@ router.get("/", async (req, res, next) => {
       orderBy: { name: "asc" },
       // No pagination UI on this list (it's a compact company picker, not a searchable
       // table like Leads/Properties) — a high safety cap keeps the query bounded as the
-      // vendor list grows without needing to build pagination for what's usually a
+      // partner list grows without needing to build pagination for what's usually a
       // short list.
       take: 500,
     });

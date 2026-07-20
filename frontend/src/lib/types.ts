@@ -146,37 +146,6 @@ export interface PartnerCompany {
   _count?: { shares: number; users: number };
 }
 
-export const VENDOR_STAGES = [
-  "NEW", "REQUIREMENT_SENT", "PROPERTY_SHARED", "MORE_DETAILS_REQUESTED",
-  "PROPERTY_VERIFIED", "SHORTLISTED", "SITE_VISIT_SCHEDULED", "NEGOTIATION",
-  "DEAL_CLOSED", "DEAL_LOST",
-] as const;
-export type VendorStage = (typeof VENDOR_STAGES)[number];
-
-// Stages that auto-send a WhatsApp template when a vendor is moved there (mirrors
-// AUTO_MESSAGE_STAGES for leads) — kept in sync manually with TEMPLATE_BY_STAGE in
-// vendorPipelineAutomation.service.ts.
-export const VENDOR_AUTO_MESSAGE_STAGES = new Set<VendorStage>([
-  "REQUIREMENT_SENT", "MORE_DETAILS_REQUESTED", "SHORTLISTED", "SITE_VISIT_SCHEDULED", "NEGOTIATION", "DEAL_CLOSED",
-]);
-
-export interface Vendor {
-  id: string;
-  name: string;
-  contactPerson?: string | null;
-  phone?: string | null;
-  whatsapp?: string | null;
-  email?: string | null;
-  city?: string | null;
-  propertyTypes?: string | null;
-  notes?: string | null;
-  stage: VendorStage;
-  siteVisitAt?: string | null;
-  createdBy?: { name: string } | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface Paginated<T> {
   data: T[];
   total: number;

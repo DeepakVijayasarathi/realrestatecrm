@@ -78,7 +78,7 @@ const SECTIONS: Section[] = [
     icon: SettingsIcon,
     title: "Settings (managers/admins only)",
     steps: [
-      "\"Templates & Currencies\" is where WhatsApp message templates live — client, vendor, and partner templates are grouped separately since each uses a different set of placeholders.",
+      "\"Templates & Currencies\" is where WhatsApp message templates live — client and partner templates are grouped separately since each uses a different set of placeholders.",
       "\"Branding\" lets you change the app name, tagline, logo, and accent color shown throughout the app and on public pages.",
       "\"Integrations\" (Super Admin only) holds the actual WhatsApp/AI/Meta API credentials — secrets are masked on screen for safety.",
     ],

@@ -9,7 +9,6 @@ import usersRoutes from "./modules/users/users.routes";
 import leadsRoutes from "./modules/leads/leads.routes";
 import propertiesRoutes from "./modules/properties/properties.routes";
 import partnersRoutes from "./modules/partners/partners.routes";
-import vendorsRoutes from "./modules/vendors/vendors.routes";
 import whatsappRoutes from "./modules/whatsapp/whatsapp.routes";
 import notificationsRoutes from "./modules/notifications/notifications.routes";
 import reportsRoutes from "./modules/reports/reports.routes";
@@ -38,7 +37,6 @@ export function createApp() {
   app.use("/api/leads", leadsRoutes);
   app.use("/api/properties", propertiesRoutes);
   app.use("/api/partners", partnersRoutes);
-  app.use("/api/vendors", vendorsRoutes);
   app.use("/api/whatsapp", whatsappRoutes);
   app.use("/api/notifications", notificationsRoutes);
   app.use("/api/reports", reportsRoutes);

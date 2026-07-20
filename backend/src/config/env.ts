@@ -7,8 +7,8 @@ dotenv.config({ override: true });
 // process's timezone — on a cloud VM/container that defaults to UTC, parsing a plain
 // "2026-07-25T10:00" datetime-local string (no offset) as local time silently anchors
 // it to 10:00 UTC = 3:30 PM IST, a ~5.5h shift that can even land on the wrong calendar
-// date. Every naive Date parse/format in this codebase (vendor site-visit scheduling,
-// lead follow-up reminders, etc.) depends on this being set before any of them run —
+// date. Every naive Date parse/format in this codebase (lead follow-up reminders, site
+// visit scheduling, etc.) depends on this being set before any of them run —
 // this file is imported first, so set it here rather than relying on deploy config.
 if (!process.env.TZ) process.env.TZ = "Asia/Kolkata";
 

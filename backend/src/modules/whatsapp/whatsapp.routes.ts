@@ -232,20 +232,17 @@ router.post("/webhook/status", async (req, res, next) => {
 router.use(requireAuth);
 
 // Templates — read for internal staff, write for admins/managers. Partners have no
-// legitimate reason to see internal message templates (same rationale used for vendor
-// data in partners.routes.ts) — this was previously open to any authenticated user.
-// Defaults to LEAD-audience templates (what every existing caller expects) — vendor
-// templates use a different placeholder set ({{vendor_name}}, {{location}}, etc.) and
-// would just confuse the lead-side send dropdown if mixed in. Settings > Templates
-// passes ?audience=all to manage both from one screen.
+// legitimate reason to see internal message templates — this was previously open to any
+// authenticated user. Defaults to LEAD-audience templates (what every existing caller
+// expects) — partner templates use a different placeholder set and would just confuse
+// the lead-side send dropdown if mixed in. Settings > Templates passes ?audience=all to
+// manage both from one screen.
 router.get("/templates", async (req, res, next) => {
   try {
     if (req.user!.role === Role.PARTNER_USER) throw forbidden();
     const audience = req.query.audience as string | undefined;
     const where =
-      audience === "all"
-        ? {}
-        : { audience: (audience === "VENDOR" ? "VENDOR" : audience === "PARTNER" ? "PARTNER" : "LEAD") as "LEAD" | "VENDOR" | "PARTNER" };
+      audience === "all" ? {} : { audience: (audience === "PARTNER" ? "PARTNER" : "LEAD") as "LEAD" | "PARTNER" };
     const templates = await prisma.whatsAppTemplate.findMany({ where, orderBy: { name: "asc" } });
     res.json({ data: templates });
   } catch (err) {
@@ -272,7 +269,7 @@ const templateSchema = z.object({
   key: z.string().min(2).regex(/^[a-z0-9_-]+$/, "Use lowercase letters, numbers, - and _"),
   name: z.string().min(2),
   body: z.string().min(5),
-  audience: z.enum(["LEAD", "VENDOR", "PARTNER"]).default("LEAD"),
+  audience: z.enum(["LEAD", "PARTNER"]).default("LEAD"),
   isActive: z.boolean().default(true),
 });
 
